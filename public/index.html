@@ -1,215 +1,1895 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AgentOS v4.5</title>
-  <link rel="stylesheet" href="css.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AgentOS v4.5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0eaf8;--sidebar:#fff;--card:#fff;--main:#f7f3fd;
+  --border:#ece6f6;--border2:#ddd5f0;--text:#18181b;--dim:#6b7280;
+  --muted:#a0aec0;--accent:#7c3aed;--accent2:#6d28d9;
+  --green:#059669;--green-bg:#d1fae5;--yellow:#d97706;--yellow-bg:#fef3c7;
+  --red:#dc2626;--red-bg:#fee2e2;--blue:#2563eb;--blue-bg:#dbeafe;
+  --teal:#0d9488;--teal-bg:#ccfbf1;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.1),0 1px 4px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#ede4f9 0%,#fce8f3 40%,#e8eeff 100%);min-height:100vh;color:var(--text)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+@keyframes cin{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+#app{display:flex;height:100vh;padding:14px;gap:12px;overflow:hidden}
+#sidebar{width:185px;min-width:185px;background:var(--sidebar);border-radius:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
+#main{flex:1;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+#rpanel{width:262px;min-width:262px;background:var(--sidebar);border-radius:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
+.sb-top{padding:16px 14px 10px;border-bottom:1px solid var(--border)}
+.sb-brand{font-size:15px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:6px}
+.sb-day{font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.sb-nav{flex:1;overflow-y:auto;padding:8px 8px}
+.sb-section{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:8px 6px 4px}
+.sb-group{display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:500;color:var(--dim);transition:all .15s;user-select:none;position:relative}
+.nav-item:hover{background:var(--main);color:var(--text)}
+.nav-item.active{background:var(--accent);color:#fff}
+.ni-icon{font-size:14px;width:16px;text-align:center;flex-shrink:0}
+.nl{display:none;align-items:center;gap:3px;margin-left:auto}
+.ld{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+.lc{font-size:10px;font-weight:600;color:var(--green)}
+.sb-bottom{padding:10px 8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
+.sb-btn{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:500;color:var(--dim);border:none;background:none;width:100%;transition:all .15s}
+.sb-btn:hover{background:var(--main);color:var(--text)}
+#topbar{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.tb-greeting{font-size:21px;font-weight:700;color:var(--text)}
+.tb-sub{font-size:11.5px;color:var(--muted);margin-top:1px}
+.search-box{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--main);border:1px solid var(--border);border-radius:10px;padding:7px 12px}
+.search-box svg{color:var(--muted);flex-shrink:0}
+#search-input{border:none;background:none;font-size:13px;color:var(--text);outline:none;width:160px}
+#search-input::placeholder{color:var(--muted)}
+#stats-row{display:flex;gap:8px;flex-shrink:0}
+.sc{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:10px 14px;display:flex;align-items:center;gap:10px;flex:1}
+.sc-icon{font-size:18px;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sc-label{font-size:10.5px;color:var(--muted);font-weight:500}
+.sc-val{font-size:16px;font-weight:700;color:var(--text)}
+#goal-bar{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;flex-shrink:0}
+#goal-input{flex:1;border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-family:'Inter',sans-serif;background:var(--main);color:var(--text);resize:none;outline:none;line-height:1.5;min-height:44px;max-height:90px;transition:border-color .15s}
+#goal-input:focus{border-color:var(--accent)}
+#goal-input::placeholder{color:var(--muted)}
+.goal-right{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+#run-btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s}
+#run-btn:hover{background:var(--accent2)}
+#run-btn:disabled{opacity:.5;cursor:not-allowed}
+.type-row{display:flex;gap:4px}
+.type-btn{border:1px solid var(--border2);background:none;border-radius:7px;padding:3px 9px;font-size:11px;font-weight:500;color:var(--dim);cursor:pointer;transition:all .15s}
+.type-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+#board-wrap{background:var(--card);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;flex:1;overflow:hidden}
+.bh{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.bh-title{font-size:14px;font-weight:700;color:var(--text)}
+.run-ind{display:none;align-items:center;gap:6px;font-size:12px;color:var(--accent);font-weight:500}
+.spin{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+#clear-btn{margin-left:auto;border:1px solid var(--border2);background:none;border-radius:8px;padding:4px 10px;font-size:11.5px;color:var(--dim);cursor:pointer}
+#clear-btn:hover{background:var(--main);color:var(--text)}
+#polish-btn{background:var(--yellow-bg);color:var(--yellow);border:1px solid #fde68a;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;display:none;gap:5px;align-items:center;transition:all .15s}
+#polish-btn:hover{background:#fef3c7}
+.filters{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ft{border:none;background:none;border-radius:7px;padding:4px 10px;font-size:12px;font-weight:500;color:var(--dim);cursor:pointer;transition:all .15s}
+.ft:hover{background:var(--main)}
+.ft.active{background:var(--accent);color:#fff}
+#task-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;padding:12px;overflow-y:auto;flex:1;align-content:start}
+.tc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:all .15s;animation:cin .2s ease;display:flex;flex-direction:column;gap:8px}
+.tc:hover{border-color:var(--border2);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.tc.sel{border-color:var(--accent);box-shadow:0 0 0 2px rgba(124,58,237,.15)}
+.tc-top{display:flex;align-items:center;gap:6px}
+.tc-badge{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.tc-id{font-size:10px;font-weight:600;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.tc-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+.tc-desc{font-size:12px;color:var(--dim);line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tc-preview{background:var(--main);border-radius:8px;padding:8px 10px;font-size:11.5px;color:var(--dim);line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-family:'JetBrains Mono',monospace}
+.tc-date{font-size:10.5px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.tc-tags{display:flex;gap:4px;flex-wrap:wrap}
+.badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px}
+.b-high{background:#fee2e2;color:var(--red)}.b-medium{background:var(--yellow-bg);color:var(--yellow)}.b-low{background:var(--blue-bg);color:var(--blue)}
+.b-todo{background:#f3f4f6;color:#6b7280}.b-progress{background:var(--teal-bg);color:var(--teal)}.b-done{background:var(--green-bg);color:var(--green)}.b-blocked{background:var(--red-bg);color:var(--red)}.b-waiting{background:var(--yellow-bg);color:var(--yellow)}
+.pulsedot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 1.2s infinite;display:inline-block;margin-right:3px}
+.ptabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.ptab{flex:1;padding:11px 0;text-align:center;font-size:12px;font-weight:600;color:var(--dim);cursor:pointer;border:none;background:none;transition:all .15s;border-bottom:2px solid transparent}
+.ptab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.pbody{flex:1;overflow-y:auto;padding:10px}
+.log-entry{font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 0;line-height:1.5;animation:cin .15s ease}
+.out-item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;animation:cin .2s ease}
+.out-badge{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.out-title{font-size:12.5px;font-weight:600;color:var(--text);flex:1}
+.out-copy{border:1px solid var(--border2);background:none;border-radius:6px;padding:3px 8px;font-size:11px;color:var(--dim);cursor:pointer}
+.out-copy:hover{background:var(--main)}
+.acard{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;animation:cin .2s ease}
+.acard.run{border-color:var(--accent);background:rgba(124,58,237,.03)}
+.ac-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.ac-badge{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ac-name{font-size:13px;font-weight:700;color:var(--text)}
+.ac-role{font-size:11px;color:var(--dim)}
+.mc{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.mc-row{display:flex;align-items:center;gap:6px}
+.mc-lbl{font-size:10.5px;color:var(--muted);width:38px;flex-shrink:0}
+.psel{border:1px solid var(--border2);border-radius:7px;padding:4px 6px;font-size:11.5px;color:var(--text);background:var(--main);flex:1;outline:none}
+.minput{border:1px solid var(--border2);border-radius:7px;padding:4px 8px;font-size:11.5px;color:var(--text);background:var(--main);flex:1;outline:none;font-family:'JetBrains Mono',monospace}
+.mc-hint{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4}
+.tbtn{border:1px solid var(--border2);background:none;border-radius:7px;padding:4px 9px;font-size:11px;color:var(--dim);cursor:pointer;white-space:nowrap;transition:all .15s}
+.tbtn:hover{background:var(--main)}.tbtn.ok{color:var(--green);border-color:var(--green)}.tbtn.err{color:var(--red);border-color:var(--red)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;animation:fi .15s ease}
+.ov.hidden{display:none}
+.modal{background:#fff;border-radius:18px;box-shadow:var(--shadow-md);max-width:600px;width:90%;max-height:90vh;overflow-y:auto;animation:cin .2s ease}
+.modal-wide{max-width:760px}
+.mhdr{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 22px 0}
+.mtitle{font-size:17px;font-weight:700;color:var(--text)}
+.msub{font-size:12px;color:var(--muted);margin-top:3px}
+.mclose{border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer;line-height:1;padding:0 2px}
+.mclose:hover{color:var(--text)}
+.mbody{padding:16px 22px 22px}
+.sec-title{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:14px 0 8px}
+.srow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.slbl{font-size:12px;font-weight:600;color:var(--text);width:90px;flex-shrink:0}
+.sinput{flex:1;border:1px solid var(--border2);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--text);background:var(--main);outline:none;font-family:'JetBrains Mono',monospace}
+.sinput:focus{border-color:var(--accent)}
+.spill{font-size:10px;padding:2px 7px;border-radius:5px;background:var(--main);color:var(--dim)}
+.pchip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;color:#fff}
+.lgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.lcard{background:var(--main);border-radius:10px;padding:10px 12px}
+.lcprov{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.lctext{font-size:12px;font-weight:600;color:var(--text)}
+.lchint{font-size:10.5px;color:var(--muted);margin-top:2px}
+.fi-wrap{padding:22px}
+.ftitle{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}
+.fdesc{font-size:13px;color:var(--dim);margin-bottom:10px}
+.ferr{background:var(--red-bg);color:var(--red);border-radius:8px;padding:8px 12px;font-size:12px;font-family:'JetBrains Mono',monospace;margin-bottom:10px;word-break:break-all}
+.ffb{font-size:12px;color:var(--dim);margin-bottom:14px}
+.fbtns{display:flex;gap:8px}
+.btn-retry{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-skip{background:none;border:1px solid var(--border2);color:var(--dim);border-radius:9px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-p{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-p:hover{background:var(--accent2)}
+.btn-g{background:none;border:1px solid var(--border2);color:var(--dim);border-radius:9px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-markdown{font-size:13.5px;line-height:1.7;color:var(--text)}
+details summary{cursor:pointer;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px;user-select:none}
+details[open] summary{color:var(--accent)}
+.agent-test-result{font-size:11px;margin-top:4px;min-height:14px}
+#notif{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e1e2e;color:#e0e0ee;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:500;z-index:999;animation:fi .2s ease;white-space:nowrap;pointer-events:none}
+#notif.hidden{display:none}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--muted);text-align:center;gap:8px}
+.empty-state .es-icon{font-size:32px}
+.empty-state .es-text{font-size:13px}
+.auth-overlay{position:fixed;inset:0;background:var(--bg,#f8f7f4);display:flex;align-items:center;justify-content:center;z-index:9999}
+.auth-overlay.hidden{display:none}
+.auth-card{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:16px;padding:40px;width:360px;display:flex;flex-direction:column;gap:12px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.auth-logo{font-size:22px;font-weight:700;color:var(--accent,#7c3aed);text-align:center;margin-bottom:4px}
+.auth-card h2{font-size:18px;font-weight:600;text-align:center;margin:0;color:#111}
+.auth-input{width:100%;padding:10px 14px;border:1px solid rgba(0,0,0,.15);border-radius:8px;font-size:14px;background:#fafafa;box-sizing:border-box;outline:none;transition:border-color .15s}
+.auth-input:focus{border-color:var(--accent,#7c3aed)}
+.auth-btn{width:100%;padding:10px;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:opacity .15s}
+.auth-btn.primary{background:var(--accent,#7c3aed);color:#fff}
+.auth-btn.ghost{background:transparent;color:var(--accent,#7c3aed);border:1px solid var(--accent,#7c3aed)}
+.auth-btn:hover{opacity:.85}.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-error{font-size:13px;color:var(--red,#dc2626);text-align:center}
+.auth-spinner{width:20px;height:20px;border:2px solid rgba(0,0,0,.1);border-top-color:var(--accent,#7c3aed);border-radius:50%;animation:spin .6s linear infinite;margin:0 auto}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <div id="app">
-
-    <!-- LEFT SIDEBAR -->
-    <aside id="sidebar">
-      <div id="logo">
-        <span class="logo-icon">⬡</span>
-        <span class="logo-text">AgentOS <em>v4.5</em></span>
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-logo">⬡ AgentOS</div>
+    <h2 id="authTitle">Sign in</h2>
+    <p id="authSubtitle" class="auth-error" style="display:none"></p>
+    <input id="authEmail" type="email" placeholder="Email" class="auth-input">
+    <input id="authPassword" type="password" placeholder="Password" class="auth-input">
+    <button id="authSubmitBtn" class="auth-btn primary" onclick="handleAuthSubmit()">Sign in</button>
+    <button class="auth-btn ghost" onclick="toggleAuthMode()">No account? Sign up</button>
+    <div id="authSpinner" class="auth-spinner" style="display:none"></div>
+  </div>
+</div>
+<div id="app">
+  <aside id="sidebar">
+    <div class="sb-top">
+      <div class="sb-day" id="sb-day"></div>
+      <div class="sb-brand"><span>⬡</span> AgentOS v4.5</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">Views</div>
+      <div class="sb-group">
+        <div class="nav-item active" data-view="board">
+          <span class="ni-icon">⊞</span> Board
+        </div>
+        <div class="nav-item" data-view="output">
+          <span class="ni-icon">◧</span> Output
+        </div>
       </div>
-
-      <nav id="main-nav">
-        <button class="nav-btn active" data-view="board" onclick="setView('board')">⊞ Board</button>
-        <button class="nav-btn" data-view="output" onclick="setView('output')">⬒ Output</button>
-      </nav>
-
-      <div id="agent-list">
-        <!-- rendered by renderAgentList() -->
+      <div class="sb-section">Agents</div>
+      <div class="sb-group">
+        <div class="nav-item" data-view="agent-CEO" id="nav-CEO">
+          <span class="ni-icon" style="color:#0d9488">⬡</span> CEO
+          <div class="nl" id="live-CEO"><div class="ld"></div><span class="lc" id="lc-CEO">0</span></div>
+        </div>
+        <div class="nav-item" data-view="agent-Writer" id="nav-Writer">
+          <span class="ni-icon" style="color:#7c3aed">✍</span> Writer
+          <div class="nl" id="live-Writer"><div class="ld"></div><span class="lc" id="lc-Writer">0</span></div>
+        </div>
+        <div class="nav-item" data-view="agent-Coder" id="nav-Coder">
+          <span class="ni-icon" style="color:#2563eb">⟨/⟩</span> Coder
+          <div class="nl" id="live-Coder"><div class="ld"></div><span class="lc" id="lc-Coder">0</span></div>
+        </div>
+        <div class="nav-item" data-view="agent-Researcher" id="nav-Researcher">
+          <span class="ni-icon" style="color:#059669">🔬</span> Researcher
+          <div class="nl" id="live-Researcher"><div class="ld"></div><span class="lc" id="lc-Researcher">0</span></div>
+        </div>
+        <div class="nav-item" data-view="agent-Reviewer" id="nav-Reviewer">
+          <span class="ni-icon" style="color:#d97706">★</span> Reviewer
+          <div class="nl" id="live-Reviewer"><div class="ld"></div><span class="lc" id="lc-Reviewer">0</span></div>
+        </div>
       </div>
+    </nav>
+    <div class="sb-bottom">
+      <button class="sb-btn" onclick="openSettings()">
+        <span>⚙</span> Settings
+      </button>
+      <button class="sb-btn" onclick="showNotif('AgentOS v4.5 — Multi-agent execution engine')">
+        <span>?</span> Help
+      </button>
+    </div>
+  </aside>
 
-      <div id="agent-cfg">
-        <!-- rendered by renderAgentCfg() -->
+  <main id="main">
+    <div id="topbar">
+      <div>
+        <div class="tb-greeting">Good <span id="tb-time"></span> 👋</div>
+        <div class="tb-sub">AgentOS v4.5 — Multi-agent execution engine</div>
       </div>
-
-      <div id="sidebar-footer">
-        <button id="settings-btn" onclick="openSettings()">⚙ Settings</button>
+      <div class="search-box">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="search-input" placeholder="Search tasks..." oninput="handleSearch(this.value)">
       </div>
-    </aside>
+    </div>
 
-    <!-- MAIN CONTENT -->
-    <main id="main">
-      <!-- Topbar -->
-      <div id="topbar">
-        <input
-          id="search-input"
-          type="text"
-          placeholder="Search tasks…"
-          oninput="onSearch(this.value)"
-        >
-        <div id="topbar-actions">
-          <button id="polish-btn" class="btn-polish hidden" onclick="polishAndCombine()">
-            <span id="polish-spin" class="spin hidden">⟳</span>
-            ★ Polish &amp; Combine
-          </button>
-          <button id="start-btn" class="btn-start" onclick="handleStart()">
-            ▶ Start
-          </button>
+    <div id="stats-row">
+      <div class="sc">
+        <div class="sc-icon" style="background:#ede9fe">⏱</div>
+        <div>
+          <div class="sc-label">Time Saved</div>
+          <div class="sc-val" id="st-time">0m</div>
+        </div>
+      </div>
+      <div class="sc">
+        <div class="sc-icon" style="background:var(--green-bg)">✓</div>
+        <div>
+          <div class="sc-label">Completed</div>
+          <div class="sc-val" id="st-done">0</div>
+        </div>
+      </div>
+      <div class="sc">
+        <div class="sc-icon" style="background:var(--teal-bg)">↻</div>
+        <div>
+          <div class="sc-label">In Progress</div>
+          <div class="sc-val" id="st-prog">0</div>
+        </div>
+      </div>
+      <div class="sc">
+        <div class="sc-icon" style="background:var(--yellow-bg)">⬡</div>
+        <div>
+          <div class="sc-label">Agents Live</div>
+          <div class="sc-val" id="st-agents">0 active</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="goal-bar">
+      <textarea id="goal-input" placeholder="Describe your goal… e.g. 'Write a market analysis for EV batteries in Europe'" rows="2"></textarea>
+      <div class="goal-right">
+        <button id="run-btn" onclick="handleStart()">▶ Start</button>
+        <div class="type-row">
+          <button class="type-btn active" data-type="auto" onclick="setTaskType('auto')">Auto</button>
+          <button class="type-btn" data-type="write" onclick="setTaskType('write')">Write</button>
+          <button class="type-btn" data-type="code" onclick="setTaskType('code')">Code</button>
+          <button class="type-btn" data-type="research" onclick="setTaskType('research')">Research</button>
+          <button class="type-btn" data-type="plan" onclick="setTaskType('plan')">Plan</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="board-wrap">
+      <div class="bh">
+        <span class="bh-title" id="bh-title">Task Board</span>
+        <div class="run-ind" id="run-ind">
+          <div class="spin"></div>
+          <span id="run-label">Running…</span>
+        </div>
+        <button id="polish-btn" onclick="handlePolish()">★ Polish &amp; Combine</button>
+        <button id="clear-btn" onclick="handleClear()">✕ Clear</button>
+      </div>
+      <div class="filters">
+        <button class="ft active" data-f="all" onclick="setFilter('all')">All</button>
+        <button class="ft" data-f="todo" onclick="setFilter('todo')">Todo</button>
+        <button class="ft" data-f="in_progress" onclick="setFilter('in_progress')">In Progress</button>
+        <button class="ft" data-f="waiting" onclick="setFilter('waiting')">Waiting</button>
+        <button class="ft" data-f="done" onclick="setFilter('done')">Done</button>
+        <button class="ft" data-f="blocked" onclick="setFilter('blocked')">Blocked</button>
+      </div>
+      <div id="task-grid"></div>
+    </div>
+  </main>
+
+  <aside id="rpanel">
+    <div class="ptabs">
+      <button class="ptab active" data-tab="logs" onclick="setTab('logs')">Logs</button>
+      <button class="ptab" data-tab="output" onclick="setTab('output')">Output</button>
+      <button class="ptab" data-tab="agents" onclick="setTab('agents')">Agents</button>
+    </div>
+    <div class="pbody" id="pbody"></div>
+  </aside>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="ov hidden" id="settings-ov" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <div class="mhdr">
+      <div>
+        <div class="mtitle">⚙ Settings</div>
+        <div class="msub">Configure API keys and provider preferences</div>
+      </div>
+      <button class="mclose" onclick="closeSettings()">×</button>
+    </div>
+    <div class="mbody">
+      <div class="sec-title">API Keys</div>
+
+      <div class="srow">
+        <span class="pchip" style="background:#1d4ed8">DS</span>
+        <span class="slbl">DeepSeek</span>
+        <input class="sinput" id="k-ds" type="password" placeholder="sk-…">
+        <button class="tbtn" data-p="deepseek" onclick="testProv('deepseek')">Test</button>
+        <span class="spill" id="s-ds">0 calls</span>
+      </div>
+      <div class="srow">
+        <span class="pchip" style="background:#be185d">GM</span>
+        <span class="slbl">AI Studio</span>
+        <input class="sinput" id="k-gm" type="password" placeholder="AIza…">
+        <button class="tbtn" data-p="gemini" onclick="testProv('gemini')">Test</button>
+        <span class="spill" id="s-gm">0 calls</span>
+      </div>
+      <div class="srow">
+        <span class="pchip" style="background:#c2410c">CF</span>
+        <span class="slbl">Cloudflare</span>
+        <input class="sinput" id="k-cf" type="password" placeholder="API Token…">
+        <button class="tbtn" data-p="cloudflare" onclick="testProv('cloudflare')">Test</button>
+        <span class="spill" id="s-cf">0 calls</span>
+      </div>
+      <div class="srow">
+        <span class="pchip" style="background:#c2410c">CF</span>
+        <span class="slbl">CF Acct ID</span>
+        <input class="sinput" id="k-cfa" type="text" placeholder="Account ID…">
+      </div>
+      <div class="srow">
+        <span class="pchip" style="background:#0891b2">GQ</span>
+        <span class="slbl">Groq</span>
+        <input class="sinput" id="k-gr" type="password" placeholder="gsk_…">
+        <button class="tbtn" data-p="groq" onclick="testProv('groq')">Test</button>
+        <span class="spill" id="s-gr">0 calls</span>
+      </div>
+      <div class="srow">
+        <span class="pchip" style="background:#5b21b6">OR</span>
+        <span class="slbl">OpenRouter</span>
+        <input class="sinput" id="k-or" type="password" placeholder="sk-or-…">
+        <button class="tbtn" data-p="openrouter" onclick="testProv('openrouter')">Test</button>
+        <span class="spill" id="s-or">0 calls</span>
+      </div>
+      <div id="settings-test-error" style="display:none;color:var(--red);font-size:12px;margin-top:4px;padding:6px 10px;background:var(--red-bg);border-radius:7px"></div>
+
+      <div class="sec-title">Rate Limits (approx. free tier)</div>
+      <div class="lgrid">
+        <div class="lcard">
+          <div class="lcprov">DeepSeek</div>
+          <div class="lctext">60 RPM</div>
+          <div class="lchint">deepseek-chat</div>
+        </div>
+        <div class="lcard">
+          <div class="lcprov">AI Studio</div>
+          <div class="lctext">15 RPM</div>
+          <div class="lchint">gemini-2.0-flash</div>
+        </div>
+        <div class="lcard">
+          <div class="lcprov">Groq</div>
+          <div class="lctext">30 RPM</div>
+          <div class="lchint">llama-3.1-8b</div>
+        </div>
+        <div class="lcard">
+          <div class="lcprov">OpenRouter</div>
+          <div class="lctext">20 RPM</div>
+          <div class="lchint">free models</div>
+        </div>
+        <div class="lcard">
+          <div class="lcprov">Cloudflare</div>
+          <div class="lctext">Generous</div>
+          <div class="lchint">Workers AI</div>
         </div>
       </div>
 
-      <!-- Goal input -->
-      <div id="goal-area">
-        <textarea
-          id="goal-input"
-          placeholder="Describe your goal… e.g. Write a competitive analysis for a new SaaS product"
-          rows="3"
-        ></textarea>
-        <div id="type-radios">
-          <label><input type="radio" name="taskType" value="auto" checked onchange="S.taskType='auto'"> Auto</label>
-          <label><input type="radio" name="taskType" value="write" onchange="S.taskType='write'"> Write</label>
-          <label><input type="radio" name="taskType" value="code"  onchange="S.taskType='code'"> Code</label>
-          <label><input type="radio" name="taskType" value="research" onchange="S.taskType='research'"> Research</label>
-          <label><input type="radio" name="taskType" value="plan"  onchange="S.taskType='plan'"> Plan</label>
-        </div>
+      <div style="display:flex;gap:8px;margin-top:18px">
+        <button class="btn-p" onclick="saveSettings()">Save Settings</button>
+        <button class="btn-g" onclick="closeSettings()">Cancel</button>
       </div>
+    </div>
+  </div>
+</div>
 
-      <!-- Stats row -->
-      <div id="stats-row">
-        <div class="stat-card" id="stat-time">
-          <span class="stat-val" id="stat-time-val">0m</span>
-          <span class="stat-label">Time Saved</span>
-        </div>
-        <div class="stat-card" id="stat-done">
-          <span class="stat-val" id="stat-done-val">0</span>
-          <span class="stat-label">Completed</span>
-        </div>
-        <div class="stat-card" id="stat-prog">
-          <span class="stat-val" id="stat-prog-val">0</span>
-          <span class="stat-label">In Progress</span>
-        </div>
-        <div class="stat-card" id="stat-live">
-          <span class="stat-val" id="stat-live-val">0</span>
-          <span class="stat-label">Agents Live</span>
-        </div>
+<!-- OUTPUT MODAL -->
+<div class="ov hidden" id="task-ov" onclick="if(event.target===this)closeOutputModal()">
+  <div class="modal modal-wide">
+    <div class="mhdr">
+      <div>
+        <div class="mtitle" id="om-title">Output</div>
+        <div class="msub" id="om-sub"></div>
       </div>
-
-      <!-- Filter tabs -->
-      <div id="filter-tabs">
-        <button class="filter-btn active" data-filter="all"         onclick="setFilter('all')">ALL</button>
-        <button class="filter-btn"        data-filter="todo"        onclick="setFilter('todo')">Todo</button>
-        <button class="filter-btn"        data-filter="in_progress" onclick="setFilter('in_progress')">In Progress</button>
-        <button class="filter-btn"        data-filter="done"        onclick="setFilter('done')">Done</button>
-        <button class="filter-btn"        data-filter="blocked"     onclick="setFilter('blocked')">Blocked</button>
-      </div>
-
-      <!-- Task board -->
-      <div id="task-board">
-        <!-- rendered by renderTaskBoard() -->
-      </div>
-    </main>
-
-    <!-- RIGHT PANEL -->
-    <aside id="right-panel">
-      <div id="panel-tabs">
-        <button class="panel-tab active" data-tab="logs"   onclick="setPanelTab('logs')">Logs</button>
-        <button class="panel-tab"        data-tab="output" onclick="setPanelTab('output')">Output</button>
-      </div>
-      <div id="panel-body">
-        <!-- rendered by renderRightPanel() -->
-      </div>
-    </aside>
-
-  </div><!-- #app -->
-
-  <!-- ═══════════════════════════════════════
-       OUTPUT MODAL
-  ════════════════════════════════════════ -->
-  <div id="outputModal" class="modal-overlay hidden" onclick="handleModalClick(event)">
-    <div class="modal-box" id="outputModalBox">
-      <div class="modal-header">
-        <h2 id="modal-title">Output</h2>
-        <button class="modal-close" onclick="closeModal()">✕</button>
-      </div>
-      <details id="modal-instruction-wrap">
-        <summary>Instruction</summary>
-        <p id="modal-instruction"></p>
+      <button class="mclose" onclick="closeOutputModal()">×</button>
+    </div>
+    <div class="mbody">
+      <details id="om-details" style="margin-bottom:12px">
+        <summary>View instruction</summary>
+        <div id="om-instruction" style="font-size:12px;color:var(--dim);margin-top:6px;line-height:1.6;padding:8px 10px;background:var(--main);border-radius:8px"></div>
       </details>
-      <div id="modal-content">
-        <!-- rendered by renderModalOutput() -->
-      </div>
-      <div class="modal-footer">
-        <button id="modal-copy-btn"  class="btn-secondary" onclick="copyModalContent()">⧉ Copy</button>
-        <button id="modal-save-btn"  class="btn-secondary" onclick="downloadModalContent()">⬇ Save .md</button>
-        <button class="btn-secondary" onclick="closeModal()">Close</button>
+      <div id="om-body"></div>
+      <div class="modal-actions">
+        <button class="btn-p" onclick="copyContent()">⎘ Copy</button>
+        <button class="btn-g" onclick="downloadContent()">↓ Save .md</button>
+        <button class="btn-g" onclick="closeOutputModal()" style="margin-left:auto">Close</button>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ═══════════════════════════════════════
-       SETTINGS MODAL
-  ════════════════════════════════════════ -->
-  <div id="settingsModal" class="modal-overlay hidden" onclick="handleSettingsClick(event)">
-    <div class="modal-box" id="settingsModalBox">
-      <div class="modal-header">
-        <h2>Settings</h2>
-        <button class="modal-close" onclick="closeSettings()">✕</button>
-      </div>
-      <div id="settings-body">
-        <h3>API Keys</h3>
-        <div class="settings-field">
-          <label>DeepSeek</label>
-          <input type="password" id="key-deepseek" placeholder="sk-…">
-        </div>
-        <div class="settings-field">
-          <label>Gemini</label>
-          <input type="password" id="key-gemini" placeholder="AIza…">
-        </div>
-        <div class="settings-field">
-          <label>OpenRouter</label>
-          <input type="password" id="key-openrouter" placeholder="sk-or-…">
-        </div>
-        <div class="settings-field">
-          <label>Groq</label>
-          <input type="password" id="key-groq" placeholder="gsk_…">
-        </div>
-        <div class="settings-field">
-          <label>Cloudflare Token</label>
-          <input type="password" id="key-cloudflare" placeholder="Token">
-        </div>
-        <div class="settings-field">
-          <label>Cloudflare Account ID</label>
-          <input type="text" id="key-cfAcct" placeholder="Account ID">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-primary" onclick="saveSettings()">Save</button>
-        <button class="btn-secondary" onclick="closeSettings()">Cancel</button>
+<!-- FAILURE MODAL -->
+<div class="ov hidden" id="fail-modal" onclick="if(event.target===this){if(S.failResolve)S.failResolve('skip');$('fail-modal').classList.add('hidden')}">
+  <div class="modal">
+    <div class="fi-wrap">
+      <div class="ftitle" id="f-title">Agent failed</div>
+      <div class="fdesc" id="f-desc">A task could not be completed.</div>
+      <div class="ferr" id="f-err"></div>
+      <div class="ffb" id="f-fb"></div>
+      <div class="fbtns">
+        <button class="btn-retry" id="f-retry" onclick="if(S.failResolve){S.failResolve('retry');$('fail-modal').classList.add('hidden')}">↻ Retry with fallback</button>
+        <button class="btn-skip" id="f-skip" onclick="if(S.failResolve){S.failResolve('skip');$('fail-modal').classList.add('hidden')}">Skip task</button>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ═══════════════════════════════════════
-       FAILURE MODAL
-  ════════════════════════════════════════ -->
-  <div id="failModal" class="modal-overlay hidden">
-    <div class="modal-box modal-box--sm">
-      <div class="modal-header">
-        <h2>Task Failed</h2>
-      </div>
-      <p id="fail-msg"></p>
-      <div class="modal-footer">
-        <button class="btn-danger"    onclick="resolveFailure('retry')">⟳ Retry with Fallback</button>
-        <button class="btn-secondary" onclick="resolveFailure('skip')">Skip</button>
-      </div>
+<!-- NOTIFICATION -->
+<div id="notif" class="hidden"></div>
+
+<script>
+// ── Supabase config ─────────────────────────────────────────
+const SUPABASE_URL  = 'https://gqxexmjgzleyjtqduqyk.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeGV4bWpnemxleWp0cWR1cXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNjM5MzUsImV4cCI6MjA5MDYzOTkzNX0.T5izarEaszny-J2TiLN2QJ_8Aual5Q_dYaJqcdEQjQY';
+let supabase = null;
+let currentUserId = null;
+
+const PROVS = {
+    deepseek:    { name: 'DeepSeek', color: '#1d4ed8', def: 'deepseek-chat', hint: '...' },
+    gemini:      { name: 'AI Studio', color: '#be185d', def: 'gemini-2.0-flash', hint: '...' },
+    cloudflare:  { name: 'Cloudflare AI', color: '#c2410c', def: '@cf/meta/...', hint: '...' },
+    openrouter:  { name: 'OpenRouter', color: '#5b21b6', def: 'meta-llama/...', hint: '...' },
+    groq:        { name: 'Groq', color: '#0891b2', def: 'llama-3.1-8b-instant', hint: '...' }
+};
+
+const FB_CHAIN = ['deepseek','gemini','groq','openrouter','cloudflare'];
+
+const AGENT_META = {
+  CEO:        { icon:'⬡', color:'#0d9488', bg:'#ccfbf1', role:'Orchestrator' },
+  Writer:     { icon:'✍', color:'#7c3aed', bg:'#ede9fe', role:'Content Executor' },
+  Coder:      { icon:'⟨/⟩', color:'#2563eb', bg:'#dbeafe', role:'Code Executor' },
+  Researcher: { icon:'🔬', color:'#059669', bg:'#d1fae5', role:'Analysis Executor' },
+  Reviewer:   { icon:'★', color:'#d97706', bg:'#fef3c7', role:'Polish & Combine' },
+};
+
+const DEF_CFG = {
+  CEO:        { provider:'deepseek', model:'deepseek-chat' },
+  Writer:     { provider:'deepseek', model:'deepseek-chat' },
+  Coder:      { provider:'deepseek', model:'deepseek-chat' },
+  Researcher: { provider:'gemini',   model:'gemini-2.0-flash' },
+  Reviewer:   { provider:'deepseek', model:'deepseek-chat' },
+};
+
+const AGENT_MAX_TOKENS = {
+  CEO:3000, Writer:4000, Coder:4000, Researcher:4000, Reviewer:8000
+};
+
+const TIME_CREDIT = {
+  document:25, code:35, analysis:20, mixed:45
+};
+
+const TYPE_INJECTIONS = {
+  write:    'Focus on written deliverables: documents, reports, articles. Assign only to Writer.',
+  code:     'Focus on code deliverables: scripts, apps, functions. Assign only to Coder.',
+  research: 'Focus on research and analysis: data, tables, comparisons. Assign only to Researcher.',
+  plan:     'Create a structured plan with multiple tasks across Writer and Researcher agents.',
+};
+
+const ST = {
+  todo:        { label:'Todo',        bc:'b-todo',     dot:'#9ca3af' },
+  in_progress: { label:'In Progress', bc:'b-progress', dot:'#7c3aed' },
+  waiting:     { label:'Waiting',     bc:'b-waiting',  dot:'#d97706' },
+  done:        { label:'Done',        bc:'b-done',     dot:'#059669' },
+  blocked:     { label:'Blocked',     bc:'b-blocked',  dot:'#dc2626' },
+};
+
+const PT = {
+  high:   { bc:'b-high',   sym:'↑↑' },
+  medium: { bc:'b-medium', sym:'↑'  },
+  low:    { bc:'b-low',    sym:'↓'  },
+};
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function normalizeAssignee(name){
+  const a = String(name||'').trim();
+  if (!a) return '';
+  const map = { ceo:'CEO', writer:'Writer', coder:'Coder', researcher:'Researcher', reviewer:'Reviewer' };
+  return map[a.toLowerCase()] || a;
+}
+
+let _notifTimer = null;
+function showNotif(msg, dur=3500) {
+  const n = $('notif');
+  n.textContent = msg;
+  n.classList.remove('hidden');
+  clearTimeout(_notifTimer);
+  _notifTimer = setTimeout(() => n.classList.add('hidden'), dur);
+}
+
+const PROMPTS = {
+  CEO: {
+    system: `You are the CEO Orchestrator. Break the user's goal into 1-4 tasks. Delegate to Writer, Coder, or Researcher only. Never produce a deliverable yourself. Write detailed instructions for each executor.
+CRITICAL: Use "depends_on" to define logical order. If Task 2 needs Task 1's output, Task 2 must list Task 1's id in depends_on.
+CRITICAL: Respond with a single valid JSON object. No text outside JSON. No fences. Start with { end with }.`,
+  },
+  Writer: {
+    system: `You are the Writer executor. Produce COMPLETE, publication-ready written content: reports, articles, briefs, plans, documentation.
+Rules:
+1. If [DEPENDENCY CONTEXT] is provided, base your work on that upstream output. Do not hallucinate.
+2. Output the FULL deliverable. Do not truncate or summarise.
+3. Use rich markdown: headings, bullet points, tables where appropriate.
+CRITICAL: Respond with a single valid JSON object. No text outside JSON. No fences. Start with { end with }.`,
+  },
+  Coder: {
+    system: `You are the Coder executor. Produce COMPLETE, working, production-ready code.
+Rules:
+1. If [DEPENDENCY CONTEXT] is provided, implement exactly what is described there.
+2. Include all imports, error handling, and comments for complex logic.
+3. Output the FULL code. Do not truncate.
+4. Wrap code in appropriate markdown fenced code blocks with language tag.
+CRITICAL: Respond with a single valid JSON object. No text outside JSON. No fences. Start with { end with }.`,
+  },
+  Researcher: {
+    system: `You are the Researcher executor. Produce COMPLETE analysis, research, data tables, and comparisons.
+Rules:
+1. If [DEPENDENCY CONTEXT] is provided, build your analysis on that upstream output.
+2. Use structured markdown: tables, numbered findings, cited reasoning.
+3. Output the FULL analysis. Do not truncate.
+CRITICAL: Respond with a single valid JSON object. No text outside JSON. No fences. Start with { end with }.`,
+  },
+  Reviewer: {
+    system: `You are the Reviewer executor. Combine and polish all provided task outputs into one cohesive, high-quality final document.
+Rules:
+1. Preserve all key content from every input. Do not omit sections.
+2. Improve flow, fix inconsistencies, add an executive summary at the top.
+3. Output a single unified markdown document.
+CRITICAL: Respond with a single valid JSON object. No text outside JSON. No fences. Start with { end with }.`,
+  },
+};
+
+function buildCEOMessage(goal, taskType) {
+  const inj = taskType !== 'auto' ? `\nConstraint: ${TYPE_INJECTIONS[taskType]}` : '';
+  return `Goal: ${goal}${inj}
+Respond only with:
+{"thought":"one sentence analysis","message":"one sentence summary","tasks":[{"title":"short title","instruction":"detailed instructions with full context","assignee":"Writer|Coder|Researcher","priority":"high|medium|low","deliverable_type":"document|code|analysis","depends_on":[]}]}`;
+}
+
+function buildExecutorMessage(task) {
+  const depContext = buildDepContext(task);
+  const ctx = depContext ? `\n\n[DEPENDENCY CONTEXT]\n${depContext}` : '';
+  return `Instruction: ${task.instruction}${ctx}
+Respond only with:
+{"thought":"one sentence approach","title":"short deliverable title","deliverable_type":"${task.deliverable_type||'document'}","format":"markdown","content":"full content here"}`;
+}
+
+function buildReviewerContext(tasks) {
+  return tasks.map((t,i) =>
+    `## Task ${i+1}: ${t.title_output||t.title}\nAssignee: ${t.assignee} | Type: ${t.deliverable_type}\n\n${t.content}`
+  ).join('\n\n---\n\n');
+}
+
+function buildDepContext(task) {
+  if (!task.depends_on || task.depends_on.length === 0) return '';
+  return task.depends_on.map(depId => {
+    const dep = S.tasks.find(t => t.id === depId);
+    if (!dep || !dep.content) return '';
+    return `### Output from "${dep.title_output||dep.title}" (${dep.assignee})\n${dep.content}`;
+  }).filter(Boolean).join('\n\n');
+}
+
+const S = {
+  tasks:[], logs:[], running:false, polishing:false, tc:1,
+  view:'board', tab:'logs', filter:'all', selTask:null,
+  searchQ:'', taskType:'auto',
+  keys:{ deepseek:'', gemini:'', cloudflare:'', cfAcct:'', openrouter:'', groq:'' },
+  cfg: JSON.parse(JSON.stringify(DEF_CFG)),
+  stats:{ deepseek:0, gemini:0, cloudflare:0, openrouter:0, groq:0 },
+  live:{ CEO:0, Writer:0, Coder:0, Researcher:0, Reviewer:0 },
+  failResolve:null, runStart:null, timeSaved:0
+};
+
+function getDoneTasks() { return S.tasks.filter(t => t.status==='done' && t.content); }
+function canPolish() {
+  return !S.running && !S.polishing &&
+    S.tasks.length > 0 &&
+    S.tasks.some(t => t.status==='done') &&
+    !S.tasks.some(t => t.assignee==='Reviewer');
+}
+
+function saveToStorage() {
+  try { localStorage.setItem('agentos_keys', JSON.stringify(S.keys)); } catch(e) {}
+}
+
+function loadKeysFromStorage() {
+  try {
+    const keys = localStorage.getItem('agentos_keys');
+    if (keys) S.keys = { ...S.keys, ...JSON.parse(keys) };
+  } catch(e) {}
+}
+
+async function saveTimeSaved() {
+  if (!supabase || !currentUserId) return;
+  await supabase.from('user_profiles')
+    .update({ time_saved: S.timeSaved })
+    .eq('user_id', currentUserId)
+    .catch(e => console.error('saveTimeSaved error:', e.message));
+}
+
+function updateTask(id, patch) {
+  const t = S.tasks.find(x => x.id===id);
+  if (!t) return;
+  Object.assign(t, patch);
+  saveToStorage();
+  if (currentUserId) {
+    dbUpsertTask(t).catch(e => console.error('DB write failed:', e));
+  }
+}
+
+function truncateForDB(content) {
+  if (!content) return null;
+  const MAX = 500000;
+  if (new Blob([content]).size > MAX) return content.slice(0, MAX) + '\n\n[Output truncated — exceeded storage limit]';
+  return content;
+}
+
+async function dbUpsertTask(task) {
+  if (!supabase || !currentUserId) return;
+  markRecentWrite(task.id);
+  const { error } = await supabase.from('tasks').upsert({
+    user_id: currentUserId, display_id: task.id,
+    title: task.title, instruction: task.instruction,
+    assignee: task.assignee, status: task.status,
+    depends_on: JSON.stringify(task.depends_on || []),
+    deliverable_type: task.deliverable_type,
+    content: truncateForDB(task.content),
+    title_output: task.title_output || null,
+    error: task.error || null
+  }, { onConflict: 'user_id,display_id' });
+  if (error) {
+    if (error.code === 'PGRST301' || (error.message && error.message.includes('JWT'))) {
+      showNotif('Session expired – please log in again.');
+      await supabase.auth.refreshSession().catch(()=>{});
+    } else { console.error('dbUpsertTask error:', error.message); }
+  }
+}
+
+async function saveAgentConfig() {
+  if (!supabase || !currentUserId) return;
+  const { error } = await supabase.from('user_profiles').upsert({
+    user_id: currentUserId, agent_configs: S.cfg
+  }, { onConflict: 'user_id' });
+  if (error) console.error('saveAgentConfig error:', error.message);
+}
+
+function mapTask(row) {
+  let depends_on = [];
+  try { depends_on = JSON.parse(row.depends_on || '[]'); } catch(e) {}
+  return {
+    id: row.display_id, title: row.title, instruction: row.instruction,
+    assignee: normalizeAssignee(row.assignee), status: row.status, depends_on,
+    deliverable_type: row.deliverable_type,
+    content: row.content || null, title_output: row.title_output || null,
+    error: row.error || null, format: 'markdown',
+    date: new Date(row.created_at).toLocaleDateString()
+  };
+}
+
+function setLive(aid, delta) {
+  S.live[aid] = Math.max(0, (S.live[aid]||0) + delta);
+  const c = S.live[aid];
+  const le = $(`live-${aid}`), ce = $(`lc-${aid}`);
+  if (le) le.style.display = c > 0 ? 'flex' : 'none';
+  if (ce) ce.textContent = `${c}`;
+  const tot = Object.values(S.live).reduce((a,b)=>a+b,0);
+  if ($('st-agents')) $('st-agents').textContent = `${tot} active`;
+  if ($('run-ind'))   $('run-ind').style.display = S.running ? 'flex' : 'none';
+  if (S.tab==='agents') renderAgents();
+}
+
+const LOG_C = { info:'#9ca3af', success:'#059669', error:'#dc2626', action:'#7c3aed' };
+
+function addLog(aid, type, msg) {
+  const e = { id:Date.now()+Math.random(), aid, type, msg,
+               t: new Date().toLocaleTimeString('en',{hour12:false}) };
+  S.logs.push(e);
+  if (S.logs.length > 300) S.logs.splice(0,50);
+  if (S.tab==='logs') appendLog(e);
+}
+
+function appendLog(e) {
+  const b = $('pbody');
+  if (!b || S.tab!=='logs') return;
+  const m = AGENT_META[e.aid] || {};
+  const el = document.createElement('div');
+  el.className = 'log-entry';
+  el.innerHTML =
+    `<span style="color:var(--muted)">${e.t} </span>`+
+    `<span style="color:${m.color||'#9ca3af'};font-weight:600">[${e.aid}] </span>`+
+    `<span style="color:${LOG_C[e.type]||'#9ca3af'}">${esc(e.msg)}</span>`;
+  b.appendChild(el);
+  b.scrollTop = b.scrollHeight;
+}
+
+function updStats() {
+  const done = S.tasks.filter(t=>t.status==='done').length;
+  const prog = S.tasks.filter(t=>t.status==='in_progress').length;
+  if ($('st-done')) $('st-done').textContent = done;
+  if ($('st-prog')) $('st-prog').textContent = prog;
+  const ts = S.timeSaved;
+  if ($('st-time')) $('st-time').textContent = ts >= 60 ? `${Math.floor(ts/60)}h ${ts%60}m` : `${ts}m`;
+  updStatPills();
+  const pb = $('polish-btn');
+  if (pb) pb.style.display = canPolish() ? 'flex' : 'none';
+}
+
+function addTimeSaved(deliverable_type) {
+  const credit = TIME_CREDIT[deliverable_type] || 20;
+  S.timeSaved += credit;
+  saveTimeSaved();
+  saveToStorage();
+  updStats();
+}
+
+function extractJSON(raw) {
+  if (!raw) return null;
+  try {
+    let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const start = text.indexOf('{');
+    if (start === -1) throw new Error('No JSON object found');
+    let depth=0, inString=false, escape=false, end=-1;
+    for (let i=start; i<text.length; i++) {
+      const ch = text[i];
+      if (escape) { escape=false; continue; }
+      if (ch==='\\' && inString) { escape=true; continue; }
+      if (ch==='"') { inString=!inString; continue; }
+      if (inString) continue;
+      if (ch==='{') depth++;
+      else if (ch==='}') { depth--; if (depth===0) { end=i; break; } }
+    }
+    if (end===-1) throw new Error('Unmatched braces');
+    return JSON.parse(text.slice(start, end+1));
+  } catch(e) { console.error('extractJSON failed:',e); return null; }
+}
+
+function renderMarkdown(raw) {
+  if (!raw) return '';
+  let html = raw;
+  const codeBlocks = [];
+
+  // Step 1: Extract fenced code blocks before any escaping
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    const escaped = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const ph = `__CODEBLOCK_${codeBlocks.length}__`;
+    codeBlocks.push(`<pre style="background:#1e1e2e;color:#e0e0ee;padding:16px;border-radius:8px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.5"><code class="lang-${lang}">${escaped}</code></pre>`);
+    return ph;
+  });
+
+  // Step 2: Escape HTML
+  html = html.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Step 3: Inline code
+  html = html.replace(/`([^`]+)`/g,
+    '<code style="font-family:\'JetBrains Mono\',monospace;background:rgba(0,0,0,0.07);padding:2px 5px;border-radius:4px;font-size:12px">$1</code>');
+
+  // Step 4: Bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  // Step 5: Italic
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // Step 6: Tables
+  html = html.replace(/((?:\|.+\|\n?)+)/g, block => {
+    const rows = block.trim().split('\n').filter(r=>r.trim());
+    const isSep = r => /^\|[\s\-:|]+\|/.test(r);
+    let table = '<table style="border-collapse:collapse;width:100%;margin:12px 0">';
+    let inHead = true;
+    for (const row of rows) {
+      if (isSep(row)) { inHead=false; continue; }
+      const tag = inHead ? 'th' : 'td';
+      const style = inHead
+        ? 'border:1px solid #ddd;padding:8px 12px;background:#f5f5f5;font-weight:600;text-align:left'
+        : 'border:1px solid #ddd;padding:8px 12px;text-align:left';
+      const cells = row.split('|').filter(c=>c.trim()!=='');
+      table += `<tr>${cells.map(c=>`<${tag} style="${style}">${c.trim()}</${tag}>`).join('')}</tr>`;
+    }
+    return table + '</table>';
+  });
+
+  // Step 7: Headings
+  html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:15px;font-weight:600;margin:16px 0 6px;color:var(--text)">$1</h3>');
+  html = html.replace(/^## (.+)$/gm,  '<h2 style="font-size:18px;font-weight:700;margin:20px 0 8px;color:var(--text)">$1</h2>');
+  html = html.replace(/^# (.+)$/gm,   '<h1 style="font-size:22px;font-weight:700;margin:24px 0 10px;color:var(--text)">$1</h1>');
+
+  // Step 8: Unordered lists
+  html = html.replace(/^\- (.+)$/gm, '<li style="margin:4px 0">$1</li>');
+  html = html.replace(/(<li[^>]*>.*<\/li>\n?)+/g,
+    m => `<ul style="margin:8px 0;padding-left:24px">${m}</ul>`);
+
+  // Step 9: Ordered lists
+  html = html.replace(/^\d+\. (.+)$/gm, '<li style="margin:4px 0">$1</li>');
+  html = html.replace(/(<li[^>]*>.*<\/li>\n?)+/g, m => {
+    if (m.includes('<ul')) return m;
+    return `<ol style="margin:8px 0;padding-left:24px">${m}</ol>`;
+  });
+
+  // Step 10: Blank lines → paragraph breaks
+  html = html.replace(/\n{2,}/g, '</p><p style="margin:8px 0">');
+  html = `<p style="margin:8px 0">${html}</p>`;
+
+  // Step 11: Single newlines → <br>
+  html = html.replace(/\n/g, '<br>');
+
+  // Step 12: Restore code blocks
+  codeBlocks.forEach((block, i) => {
+    html = html.replace(`__CODEBLOCK_${i}__`, block);
+  });
+
+  return html;
+}
+
+async function callAgent(aid, systemPrompt, userMessage, maxTokens) {
+  const cfg = S.cfg[aid];
+  const provider = cfg.provider;
+  const key = S.keys[provider] || (provider==='cloudflare' ? S.keys.cloudflare : '');
+  if (!key) { showNotif(`No ${PROVS[provider].name} API key. Open Settings.`); return null; }
+  S.stats[provider] = (S.stats[provider]||0) + 1;
+  addLog(aid, 'action', `Calling ${PROVS[provider].name} / ${cfg.model}`);
+  try {
+    const res = await fetch('/api/agent', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        provider, model: cfg.model,
+        systemPrompt, userMessage,
+        apiKeys:{ ...S.keys },
+        max_tokens: maxTokens || AGENT_MAX_TOKENS[aid] || 4000
+      })
+    });
+    if (res.status === 429) {
+      addLog(aid,'error',`Rate limited by ${PROVS[provider].name}. Waiting 60s…`);
+      await countdown429();
+      // one retry
+      const res2 = await fetch('/api/agent', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          provider, model: cfg.model,
+          systemPrompt, userMessage,
+          apiKeys:{ ...S.keys },
+          max_tokens: maxTokens || AGENT_MAX_TOKENS[aid] || 4000
+        })
+      });
+      if (!res2.ok) throw new Error(`HTTP ${res2.status}`);
+      const d2 = await res2.json();
+      return d2.content ?? null;
+    }
+    if (res.status === 404) { showNotif('Model not found. Check model name in Agents tab.'); return null; }
+    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message||`HTTP ${res.status}`); }
+    const data = await res.json();
+    return data.content ?? null;
+  } catch(e) {
+    addLog(aid,'error',e.message);
+    throw e;
+  }
+}
+
+async function countdown429() {
+  let s = 60;
+  return new Promise(res => {
+    const iv = setInterval(() => {
+      showNotif(`Rate limited. Retrying in ${s}s…`, 1500);
+      s--;
+      if (s <= 0) { clearInterval(iv); res(); }
+    }, 1000);
+  });
+}
+
+function getFallback(aid) {
+  const cur = S.cfg[aid].provider;
+  for (const p of FB_CHAIN) {
+    if (p !== cur && S.keys[p]) return p;
+  }
+  return null;
+}
+
+async function callFO(aid, systemPrompt, userMessage, task, maxTokens) {
+  try {
+    const raw = await callAgent(aid, systemPrompt, userMessage, maxTokens);
+    return raw;
+  } catch(err) {
+    const fb = getFallback(aid);
+    const fbModel = fb ? PROVS[fb].def : null;
+    const choice = await showFail(aid, task, err.message, fb, fbModel);
+    if (choice === 'retry' && fb) {
+      const orig = { ...S.cfg[aid] };
+      S.cfg[aid] = { provider: fb, model: fbModel };
+      if (S.tab==='agents') renderAgents();
+      try {
+        addLog(aid,'action',`Retrying with ${PROVS[fb].name} / ${fbModel}`);
+        return await callAgent(aid, systemPrompt, userMessage, maxTokens);
+      } catch(e2) {
+        addLog(aid,'error',`Fallback failed: ${e2.message}`);
+        if (task) updateTask(task.id, {status:'blocked',error:e2.message});
+        return null;
+      } finally {
+        S.cfg[aid] = orig;
+        if (S.tab==='agents') renderAgents();
+      }
+    }
+    return null;
+  }
+}
+
+function showFail(aid, task, errMsg, fb, fbm) {
+  return new Promise(res => {
+    S.failResolve = res;
+    const m = AGENT_META[aid] || {};
+    $('f-title').textContent = `${m.icon||''} ${aid} agent failed`;
+    $('f-desc').textContent = task ? `Task "${task.title}" could not be completed.` : `Agent ${aid} encountered an error.`;
+    $('f-err').textContent = errMsg;
+    const fi = $('f-fb');
+    if (fb && fbm) {
+      fi.innerHTML = `Fallback: <strong style="color:${PROVS[fb].color}">${PROVS[fb].name}</strong> → <code>${esc(fbm)}</code>`;
+      $('f-retry').disabled = false; $('f-retry').style.opacity = '1';
+    } else {
+      fi.textContent = 'No fallback — add more API keys in Settings.';
+      $('f-retry').disabled = true; $('f-retry').style.opacity = '.4';
+    }
+    $('fail-modal').classList.remove('hidden');
+  });
+}
+
+async function testAgentModel(aid) {
+  const btn = document.querySelector(`.agent-test-btn[data-a="${aid}"]`);
+  const res = document.querySelector(`.agent-test-result[data-a="${aid}"]`);
+  const minput = document.querySelector(`.am[data-a="${aid}"]`);
+  if (!btn || !res) return;
+  const model = minput ? minput.value.trim() : S.cfg[aid].model;
+  btn.textContent = '…'; btn.disabled = true;
+  res.textContent = '';
+  const orig = { ...S.cfg[aid] };
+  S.cfg[aid] = { ...S.cfg[aid], model };
+  try {
+    const raw = await callAgent(aid, 'You are a helpful assistant.', 'Reply with: OK', 20);
+    if (raw) {
+      res.textContent = '✓ Connected'; res.style.color = 'var(--green)';
+      btn.className = 'tbtn ok'; btn.textContent = '✓';
+    } else {
+      res.textContent = '✗ No response'; res.style.color = 'var(--red)';
+      btn.className = 'tbtn err'; btn.textContent = '✗';
+    }
+  } catch(e) {
+    res.textContent = `✗ ${e.message}`; res.style.color = 'var(--red)';
+    btn.className = 'tbtn err'; btn.textContent = '✗';
+  } finally {
+    S.cfg[aid] = orig;
+    setTimeout(() => { btn.className='tbtn'; btn.textContent='Test'; btn.disabled=false; }, 6000);
+  }
+}
+
+function mkTask({ id, title, instruction, assignee, priority='medium',
+                  deliverable_type='document', depends_on=[] }) {
+  return {
+    id,
+    title,
+    instruction,
+    assignee,
+    priority,
+    status: depends_on.length > 0 ? 'waiting' : 'todo',
+    createdBy: 'CEO',
+    deliverable_type,
+    format: 'markdown',
+    content: null,
+    title_output: null,
+    error: null,
+    depends_on,
+    date: new Date().toLocaleDateString(),
+  };
+}
+
+function upTask(id, patch) {
+  updateTask(id, patch);
+  updStats();
+  refreshBoard();
+  if (S.selTask && S.selTask.id === id) Object.assign(S.selTask, patch);
+  if (S.tab === 'output') renderPanel();
+}
+
+let activeExecutors = 0;
+const MAX_CONCURRENT = 2;
+
+async function runCEO(goal) {
+  addLog('CEO','action','Planning tasks…');
+  setLive('CEO', 1);
+  const sys = PROMPTS.CEO.system;
+  const usr = buildCEOMessage(goal, S.taskType);
+  let raw;
+  try {
+    raw = await callFO('CEO', sys, usr, null, AGENT_MAX_TOKENS.CEO);
+  } finally {
+    setLive('CEO', -1);
+  }
+  if (!raw) { addLog('CEO','error','No response from CEO.'); return; }
+  const parsed = extractJSON(raw);
+  if (!parsed || !Array.isArray(parsed.tasks) || parsed.tasks.length === 0) {
+    addLog('CEO','error','Agent returned unstructured output. Try deepseek-chat.');
+    showNotif('Agent returned unstructured output. Try deepseek-chat.');
+    return;
+  }
+  addLog('CEO','success', parsed.message || `Created ${parsed.tasks.length} task(s).`);
+  const idMap = {};
+  // first pass: assign ids
+  parsed.tasks.forEach((t, i) => {
+    const id = `LOC-${String(S.tc++).padStart(2,'0')}`;
+    idMap[i] = id;
+  });
+  parsed.tasks.forEach((t, i) => {
+    const id = idMap[i];
+    // map depends_on indices or title refs to ids — CEO returns empty array per spec
+    const deps = (t.depends_on || []).map(ref => {
+      if (typeof ref === 'number') return idMap[ref];
+      // match by index string
+      const idx = parseInt(ref);
+      if (!isNaN(idx) && idMap[idx] !== undefined) return idMap[idx];
+      return ref;
+    }).filter(Boolean);
+    const task = mkTask({
+      id, title:t.title, instruction:t.instruction,
+      assignee:normalizeAssignee(t.assignee), priority:t.priority||'medium',
+      deliverable_type:t.deliverable_type||'document',
+      depends_on: deps
+    });
+    S.tasks.push(task);
+    addLog(t.assignee||'CEO','info',`Task created: ${t.title}`);
+  });
+  saveToStorage();
+  refreshBoard();
+  updStats();
+  await evaluateTaskQueue();
+}
+
+async function evaluateTaskQueue() {
+  if (!S.running && !S.polishing) return;
+  let stateChanged = false;
+  const toCheck = S.tasks.filter(t =>
+    t.status==='todo' || t.status==='waiting' || t.status==='blocked'
+  );
+  for (const task of toCheck) {
+    const deps = task.depends_on || [];
+    if (deps.length === 0) {
+      if (task.status !== 'todo') { updateTask(task.id,{status:'todo'}); stateChanged=true; }
+      if (activeExecutors < MAX_CONCURRENT) {
+        activeExecutors++;
+        updateTask(task.id,{status:'in_progress'});
+        runExecutor(task);
+      }
+      continue;
+    }
+    const depTasks   = deps.map(id => S.tasks.find(t=>t.id===id)).filter(Boolean);
+    const anyBlocked = depTasks.some(d => d.status==='blocked');
+    const allDone    = depTasks.every(d => d.status==='done');
+    if (anyBlocked) {
+      if (task.status !== 'blocked') {
+        updateTask(task.id,{status:'blocked',error:'Upstream task failed.'});
+        stateChanged = true;
+      }
+    } else if (allDone) {
+      if (activeExecutors < MAX_CONCURRENT) {
+        activeExecutors++;
+        updateTask(task.id,{status:'in_progress'});
+        runExecutor(task);
+      } else {
+        if (task.status !== 'waiting') { updateTask(task.id,{status:'waiting'}); stateChanged=true; }
+      }
+    } else {
+      if (task.status !== 'waiting') { updateTask(task.id,{status:'waiting'}); stateChanged=true; }
+    }
+  }
+  if (stateChanged) evaluateTaskQueue();
+}
+
+async function runExecutor(task) {
+  const aid = normalizeAssignee(task.assignee);
+  if (aid !== task.assignee) {
+    updateTask(task.id,{assignee:aid});
+    task.assignee = aid;
+  }
+  if (!AGENT_META[aid] || aid==='CEO' || aid==='Reviewer') {
+    activeExecutors--;
+    updateTask(task.id,{status:'blocked',error:`Unknown assignee: ${aid}`});
+    return;
+  }
+  addLog(aid,'action',`Starting: ${task.title}`);
+  setLive(aid, 1);
+  const sys = PROMPTS[aid].system;
+  const usr = buildExecutorMessage(task);
+  let raw = null;
+  try {
+    raw = await callFO(aid, sys, usr, task, AGENT_MAX_TOKENS[aid]);
+    if (!raw) {
+      addLog(aid,'error','No content returned. Model may be rate limited.');
+      upTask(task.id,{status:'blocked',error:'No content returned.'});
+      return;
+    }
+    const parsed = extractJSON(raw);
+    if (!parsed || !parsed.content) {
+      // check if cut off — try with 1.5x tokens
+      if (raw.length > 100) {
+        addLog(aid,'info','Response may be cut off. Retrying with more tokens…');
+        const raw2 = await callAgent(aid, sys, usr, Math.floor(AGENT_MAX_TOKENS[aid]*1.5));
+        const p2 = raw2 ? extractJSON(raw2) : null;
+        if (p2 && p2.content) {
+          upTask(task.id,{
+            status:'done', content:p2.content,
+            title_output:p2.title||task.title,
+            deliverable_type:p2.deliverable_type||task.deliverable_type,
+            format:p2.format||'markdown'
+          });
+          addTimeSaved(p2.deliverable_type||task.deliverable_type);
+          addLog(aid,'success',`Done (retry): ${p2.title||task.title}`);
+          return;
+        }
+      }
+      addLog(aid,'error','Agent returned unstructured output. Try deepseek-chat.');
+      upTask(task.id,{status:'blocked',error:'Unstructured output.'});
+      return;
+    }
+    upTask(task.id,{
+      status:'done', content:parsed.content,
+      title_output:parsed.title||task.title,
+      deliverable_type:parsed.deliverable_type||task.deliverable_type,
+      format:parsed.format||'markdown'
+    });
+    addTimeSaved(parsed.deliverable_type||task.deliverable_type);
+    addLog(aid,'success',`Completed: ${parsed.title||task.title}`);
+  } catch(e) {
+    addLog(aid,'error',`Error: ${e.message}`);
+    upTask(task.id,{status:'blocked',error:e.message});
+  } finally {
+    setLive(aid,-1);
+    activeExecutors--;
+    refreshBoard();
+    updStats();
+    evaluateTaskQueue();
+  }
+}
+
+async function runReviewer() {
+  const done = getDoneTasks();
+  if (done.length === 0) { showNotif('No completed tasks to review.'); return; }
+  const newId = `LOC-${String(S.tc++).padStart(2,'0')}`;
+  const reviewTask = mkTask({
+    id: newId,
+    title: 'Combined Final Output',
+    instruction: 'Combine all outputs into one polished final document.',
+    assignee: 'Reviewer',
+    priority: 'high',
+    deliverable_type: 'mixed',
+    depends_on: done.map(t=>t.id)
+  });
+  S.tasks.push(reviewTask);
+  saveToStorage();
+  refreshBoard();
+  updStats();
+  addLog('Reviewer','action','Starting Polish & Combine…');
+  setLive('Reviewer',1);
+  const sys = PROMPTS.Reviewer.system;
+  const ctx = buildReviewerContext(done);
+  const usr = `${ctx}\n\nRespond only with:\n{"thought":"one sentence approach","title":"Final Combined Output","deliverable_type":"mixed","format":"markdown","content":"full polished content"}`;
+  let raw = null;
+  try {
+    raw = await callFO('Reviewer', sys, usr, reviewTask, AGENT_MAX_TOKENS.Reviewer);
+    if (!raw) {
+      addLog('Reviewer','error','No content returned.');
+      upTask(newId,{status:'blocked',error:'No content returned.'});
+      return;
+    }
+    const parsed = extractJSON(raw);
+    if (!parsed || !parsed.content) {
+      addLog('Reviewer','error','Unstructured output. Try deepseek-chat.');
+      upTask(newId,{status:'blocked',error:'Unstructured output.'});
+      return;
+    }
+    upTask(newId,{
+      status:'done', content:parsed.content,
+      title_output:parsed.title||'Combined Final Output',
+      deliverable_type:'mixed', format:'markdown'
+    });
+    addTimeSaved('mixed');
+    addLog('Reviewer','success','Polish & Combine complete.');
+  } catch(e) {
+    addLog('Reviewer','error',`Error: ${e.message}`);
+    upTask(newId,{status:'blocked',error:e.message});
+  } finally {
+    setLive('Reviewer',-1);
+    S.polishing = false;
+    refreshBoard();
+    updStats();
+  }
+}
+
+async function handlePolish() {
+  if (!canPolish()) return;
+  S.polishing = true;
+  const pb = $('polish-btn');
+  if (pb) { pb.style.display='flex'; pb.innerHTML='<div class="spin"></div> Combining…'; pb.disabled=true; }
+  try {
+    await runReviewer();
+  } finally {
+    S.polishing = false;
+    if (pb) { pb.disabled=false; }
+    updStats();
+  }
+}
+
+function retryTask(taskId) {
+  function resetDownstream(id) {
+    const t = S.tasks.find(x=>x.id===id);
+    if (t) updateTask(t.id,{status:'todo',error:null});
+    S.tasks
+      .filter(child=>(child.depends_on||[]).includes(id))
+      .forEach(child=>resetDownstream(child.id));
+  }
+  resetDownstream(taskId);
+  refreshBoard();
+  updStats();
+  // re-enter evaluation if something is running
+  if (S.running || S.polishing) evaluateTaskQueue();
+}
+
+function refreshBoard() {
+  const grid = $('task-grid');
+  if (!grid) return;
+  let tasks = [...S.tasks];
+  if (S.searchQ) {
+    const q = S.searchQ.toLowerCase();
+    tasks = tasks.filter(t =>
+      t.title.toLowerCase().includes(q) ||
+      (t.instruction||'').toLowerCase().includes(q) ||
+      (t.assignee||'').toLowerCase().includes(q)
+    );
+  }
+  if (S.filter !== 'all') tasks = tasks.filter(t => t.status === S.filter);
+  if (S.view.startsWith('agent-')) {
+    const ag = S.view.replace('agent-','');
+    tasks = tasks.filter(t => t.assignee === ag);
+  }
+  if (tasks.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="es-icon">📋</div>
+      <div class="es-text">${S.tasks.length===0?'No tasks yet — enter a goal above to get started':'No tasks match this filter'}</div>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = tasks.map(renderTaskCard).join('');
+}
+
+function renderTaskCard(t) {
+  const m  = AGENT_META[t.assignee] || { icon:'?', color:'#888', bg:'#eee' };
+  const st = ST[t.status] || ST.todo;
+  const pt = PT[t.priority] || PT.medium;
+  const sel = S.selTask && S.selTask.id === t.id ? ' sel' : '';
+  const prog = t.status === 'in_progress'
+    ? `<span class="pulsedot"></span>` : '';
+  const previewHtml = t.content
+    ? `<div class="tc-preview">${esc(t.content.slice(0,180))}…</div>` : '';
+  const dtBadge = t.deliverable_type
+    ? `<span class="badge" style="background:var(--main);color:var(--dim)">${t.deliverable_type}</span>` : '';
+  const errorHtml = t.error
+    ? `<div style="font-size:11px;color:var(--red);margin-top:2px">${esc(t.error.slice(0,80))}</div>` : '';
+  const retryHtml = t.status === 'blocked'
+    ? `<button onclick="event.stopPropagation();retryTask('${t.id}')"
+         style="border:1px solid var(--border2);background:none;border-radius:6px;
+                padding:2px 8px;font-size:11px;color:var(--dim);cursor:pointer;margin-top:4px">
+         ↻ Retry</button>` : '';
+  return `<div class="tc${sel}" onclick="openOutputModal('${t.id}')">
+    <div class="tc-top">
+      <div class="tc-badge" style="background:${m.bg};color:${m.color}">${m.icon}</div>
+      <span class="tc-id">${t.id}</span>
+      <span class="badge ${pt.bc}" style="margin-left:auto">${pt.sym}</span>
     </div>
-  </div>
+    <div class="tc-title">${esc(t.title)}</div>
+    <div class="tc-desc">${esc(t.instruction||'').slice(0,120)}</div>
+    ${previewHtml}
+    ${errorHtml}
+    ${retryHtml}
+    <div class="tc-tags">
+      <span class="badge ${st.bc}">${prog}${st.label}</span>
+      ${dtBadge}
+      <span class="badge" style="background:${m.bg};color:${m.color}">${t.assignee}</span>
+    </div>
+    <div class="tc-date">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      ${t.date||''}
+    </div>
+  </div>`;
+}
 
-  <!-- NOTIFICATION BAR -->
-  <div id="notification" class="notification hidden"></div>
+function renderPanel() {
+  if (S.tab === 'logs')   { renderLogs();   return; }
+  if (S.tab === 'output') { renderOutput(); return; }
+  if (S.tab === 'agents') { renderAgents(); return; }
+}
 
-  <script src="state.js"></script>
-  <script src="prompts.js"></script>
-  <script src="core.js"></script>
-  <script src="engine.js"></script>
-  <script src="ui.js"></script>
-  <script src="init.js"></script>
+function renderLogs() {
+  const b = $('pbody'); if (!b) return;
+  if (S.logs.length === 0) {
+    b.innerHTML = '<div class="empty-state"><div class="es-icon">📋</div><div class="es-text">No logs yet</div></div>';
+    return;
+  }
+  b.innerHTML = '';
+  S.logs.forEach(e => appendLog(e));
+  b.scrollTop = b.scrollHeight;
+}
+
+function renderOutput() {
+  const b = $('pbody'); if (!b) return;
+  const done = getDoneTasks();
+  if (done.length === 0) {
+    b.innerHTML = '<div class="empty-state"><div class="es-icon">📄</div><div class="es-text">No completed outputs yet</div></div>';
+    return;
+  }
+  b.innerHTML = done.map(t => {
+    const m = AGENT_META[t.assignee] || { icon:'?', color:'#888', bg:'#eee' };
+    return `<div class="out-item">
+      <div class="out-badge" style="background:${m.bg};color:${m.color}">${m.icon}</div>
+      <div class="out-title">${esc(t.title_output||t.title)}</div>
+      <button class="out-copy" onclick="copyRaw('${t.id}')">⎘</button>
+    </div>`;
+  }).join('');
+}
+
+function copyRaw(taskId) {
+  const t = S.tasks.find(x => x.id === taskId);
+  if (!t || !t.content) return;
+  copyText(t.content);
+  showNotif('Copied to clipboard');
+}
+
+function renderAgents() {
+  const b = $('pbody'); if (!b || S.tab !== 'agents') return;
+  const active = document.activeElement;
+  const activeId = active ? active.dataset.a : null;
+  const activeClass = active ? active.className : null;
+
+  b.innerHTML = Object.entries(AGENT_META).map(([aid, m]) => {
+    const cfg = S.cfg[aid];
+    const prov = PROVS[cfg.provider] || {};
+    const hasKey = !!S.keys[cfg.provider];
+    const isRun = (S.live[aid]||0) > 0;
+    const warn = !hasKey
+      ? `<div style="font-size:10.5px;color:var(--yellow);margin-top:4px">⚠ No ${prov.name||cfg.provider} key — open Settings</div>` : '';
+    return `<div class="acard${isRun?' run':''}">
+      <div class="ac-top">
+        <div class="ac-badge" style="background:${m.bg};color:${m.color}">${m.icon}</div>
+        <div>
+          <div class="ac-name">${aid}</div>
+          <div class="ac-role">${m.role}</div>
+        </div>
+        ${isRun ? '<div class="spin" style="margin-left:auto;width:12px;height:12px"></div>' : ''}
+      </div>
+      <div class="mc">
+        <div class="mc-row">
+          <span class="mc-lbl">Provider</span>
+          <select class="psel ap" data-a="${aid}" onchange="onProvChange('${aid}',this.value)">
+            ${Object.entries(PROVS).map(([k,v])=>`<option value="${k}"${cfg.provider===k?' selected':''}>${v.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="mc-row">
+          <span class="mc-lbl">Model</span>
+          <input class="minput am" data-a="${aid}" value="${esc(cfg.model)}"
+            oninput="S.cfg['${aid}'].model=this.value"
+            onchange="S.cfg['${aid}'].model=this.value;saveToStorage()"
+            onblur="S.cfg['${aid}'].model=this.value;saveToStorage()">
+          <button class="tbtn agent-test-btn" data-a="${aid}"
+            onclick="testAgentModel('${aid}')">Test</button>
+        </div>
+        <div class="mc-hint">${esc(prov.hint||'')}</div>
+        <div class="agent-test-result" data-a="${aid}"></div>
+        ${warn}
+      </div>
+    </div>`;
+  }).join('');
+
+  // restore focus
+  if (activeId && activeClass) {
+    const el = b.querySelector(`.${activeClass.split(' ')[0]}[data-a="${activeId}"]`);
+    if (el && el !== document.activeElement) {
+      el.focus();
+      if (el.tagName === 'INPUT') { const len = el.value.length; el.setSelectionRange(len,len); }
+    }
+  }
+}
+
+function onProvChange(aid, prov) {
+  S.cfg[aid].provider = prov;
+  S.cfg[aid].model = PROVS[prov].def;
+  saveToStorage();
+  renderAgents();
+}
+
+let _currentModalTask = null;
+
+function openOutputModal(taskId) {
+  const t = S.tasks.find(x => x.id === taskId);
+  if (!t) return;
+  _currentModalTask = t;
+  S.selTask = t;
+  refreshBoard();
+
+  const m = AGENT_META[t.assignee] || { icon:'?', color:'#888' };
+  $('om-title').textContent = `${m.icon} ${t.title_output || t.title}`;
+  $('om-sub').textContent   = `${t.assignee} · ${t.deliverable_type||''} · ${t.date||''}`;
+  $('om-instruction').textContent = t.instruction || '';
+
+  const body = $('om-body');
+  if (!t.content) {
+    body.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">
+      ${t.status==='blocked'
+        ? `<span style="color:var(--red)">⚠ Task blocked: ${esc(t.error||'Unknown error')}</span>`
+        : 'No output yet — task is ' + (t.status||'pending')}
+    </div>`;
+  } else if (
+    t.deliverable_type === 'code' &&
+    (t.content.includes('<!DOCTYPE html>') || t.content.includes('<html>'))
+  ) {
+    const blob = new Blob([t.content], { type:'text/html' });
+    const url  = URL.createObjectURL(blob);
+    body.innerHTML = `
+      <div class="modal-markdown">${renderMarkdown(t.content)}</div>
+      <div class="modal-preview" style="margin-top:16px">
+        <div style="font-size:12px;font-weight:600;color:var(--dim);margin-bottom:6px">▶ Live Preview</div>
+        <iframe src="${url}" sandbox="allow-same-origin allow-scripts"
+          style="width:100%;height:420px;border:1px solid var(--border);border-radius:10px"></iframe>
+      </div>`;
+  } else {
+    body.innerHTML = `<div class="modal-markdown">${renderMarkdown(t.content)}</div>`;
+  }
+
+  $('task-ov').classList.remove('hidden');
+}
+
+function closeOutputModal() {
+  // FIX 3: revoke blob URLs before hiding
+  document.querySelectorAll('#om-body iframe').forEach(iframe => {
+    if (iframe.src && iframe.src.startsWith('blob:')) URL.revokeObjectURL(iframe.src);
+  });
+  $('task-ov').classList.add('hidden');
+  S.selTask = null;
+  _currentModalTask = null;
+  refreshBoard();
+}
+
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => copyTextFallback(text));
+  } else {
+    copyTextFallback(text);
+  }
+}
+
+function copyTextFallback(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+}
+
+function copyContent() {
+  if (!_currentModalTask || !_currentModalTask.content) {
+    showNotif('Nothing to copy'); return;
+  }
+  copyText(_currentModalTask.content);
+  showNotif('Copied to clipboard ✓');
+}
+
+function downloadContent() {
+  if (!_currentModalTask || !_currentModalTask.content) {
+    showNotif('Nothing to download'); return;
+  }
+  const t = _currentModalTask;
+  const filename = (t.title_output || t.title || 'output')
+    .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') + '.md';
+  const blob = new Blob([t.content], { type:'text/markdown' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showNotif(`Saved ${filename}`);
+}
+
+function openSettings() {
+  $('k-ds').value  = S.keys.deepseek   || '';
+  $('k-gm').value  = S.keys.gemini     || '';
+  $('k-cf').value  = S.keys.cloudflare || '';
+  $('k-cfa').value = S.keys.cfAcct     || '';
+  $('k-gr').value  = S.keys.groq       || '';
+  $('k-or').value  = S.keys.openrouter || '';
+  updStatPills();
+  clearSettingsTestError();
+  $('settings-ov').classList.remove('hidden');
+}
+
+function closeSettings() {
+  $('settings-ov').classList.add('hidden');
+  clearSettingsTestError();
+  saveAgentConfig();
+}
+
+function saveSettings() {
+  S.keys.deepseek   = $('k-ds').value.trim();
+  S.keys.gemini     = $('k-gm').value.trim();
+  S.keys.cloudflare = $('k-cf').value.trim();
+  S.keys.cfAcct     = $('k-cfa').value.trim();
+  S.keys.groq       = $('k-gr').value.trim();
+  S.keys.openrouter = $('k-or').value.trim();
+  saveToStorage();
+  closeSettings();
+  if (S.tab === 'agents') renderAgents();
+  showNotif('Settings saved ✓');
+}
+
+function updStatPills() {
+  const map = {
+    deepseek:'s-ds', gemini:'s-gm', cloudflare:'s-cf', groq:'s-gr', openrouter:'s-or'
+  };
+  Object.entries(map).forEach(([prov, id]) => {
+    const el = $(id); if (!el) return;
+    el.textContent = `${S.stats[prov]||0} calls`;
+  });
+}
+
+async function testProv(prov) {
+  const keyMap = { deepseek:'k-ds', gemini:'k-gm', cloudflare:'k-cf', groq:'k-gr', openrouter:'k-or' };
+  const inputId = keyMap[prov];
+  const key = inputId ? $(inputId).value.trim() : '';
+  if (!key) { showSettingsTestError(`No ${PROVS[prov].name} key entered.`); return; }
+  clearSettingsTestError();
+  const btn = document.querySelector(`.tbtn[data-p="${prov}"]`);
+  if (btn) { btn.textContent='…'; btn.disabled=true; }
+  const origKey = S.keys[prov];
+  const origCfg = { ...S.cfg.CEO };
+  S.keys[prov] = key;
+  S.cfg.CEO = { provider:prov, model:PROVS[prov].def };
+  try {
+    const raw = await callAgent('CEO','You are a helpful assistant.','Reply with: OK', 20);
+    if (raw) {
+      if (btn) { btn.textContent='✓'; btn.className='tbtn ok'; }
+    } else {
+      showSettingsTestError(`${PROVS[prov].name}: no response received.`);
+      if (btn) { btn.textContent='✗'; btn.className='tbtn err'; }
+    }
+  } catch(e) {
+    showSettingsTestError(`${PROVS[prov].name}: ${e.message}`);
+    if (btn) { btn.textContent='✗'; btn.className='tbtn err'; }
+  } finally {
+    S.keys[prov] = origKey;
+    S.cfg.CEO = origCfg;
+    setTimeout(() => {
+      if (btn) { btn.textContent='Test'; btn.className='tbtn'; btn.disabled=false; }
+    }, 6000);
+  }
+}
+
+function showSettingsTestError(msg) {
+  const el = $('settings-test-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function clearSettingsTestError() {
+  const el = $('settings-test-error');
+  if (el) { el.textContent=''; el.style.display='none'; }
+}
+
+function setView(v) {
+  S.view = v;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === v);
+  });
+  const titles = { board:'Task Board', output:'Output' };
+  const bh = $('bh-title');
+  if (bh) {
+    if (titles[v]) bh.textContent = titles[v];
+    else if (v.startsWith('agent-')) bh.textContent = v.replace('agent-','') + ' Tasks';
+  }
+  refreshBoard();
+}
+
+function setTab(t) {
+  S.tab = t;
+  document.querySelectorAll('.ptab').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === t);
+  });
+  const b = $('pbody');
+  if (b) b.innerHTML = '';
+  renderPanel();
+}
+
+function setFilter(f) {
+  S.filter = f;
+  document.querySelectorAll('.ft').forEach(el => {
+    el.classList.toggle('active', el.dataset.f === f);
+  });
+  refreshBoard();
+}
+
+function handleSearch(q) {
+  S.searchQ = q.trim();
+  refreshBoard();
+}
+
+function setTaskType(type) {
+  S.taskType = type;
+  document.querySelectorAll('.type-btn').forEach(el => {
+    el.classList.toggle('active', el.dataset.type === type);
+  });
+}
+
+function handleClear() {
+  if (S.running || S.polishing) { showNotif('Cannot clear while running.'); return; }
+  S.tasks = []; S.logs = []; S.tc = 1; S.selTask = null;
+  S.timeSaved = 0; activeExecutors = 0;
+  Object.keys(S.live).forEach(k => S.live[k] = 0);
+  Object.keys(S.stats).forEach(k => S.stats[k] = 0);
+  saveToStorage();
+  refreshBoard();
+  updStats();
+  if (S.tab === 'logs' || S.tab === 'output') renderPanel();
+  document.querySelectorAll('[id^="live-"]').forEach(el => el.style.display='none');
+  showNotif('Board cleared');
+}
+
+function showAuthScreen() { $('authOverlay').classList.remove('hidden'); }
+function hideAuthScreen() { $('authOverlay').classList.add('hidden'); }
+
+let authMode = 'signin';
+function toggleAuthMode() {
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  $('authTitle').textContent     = authMode === 'signin' ? 'Sign in' : 'Create account';
+  $('authSubmitBtn').textContent = authMode === 'signin' ? 'Sign in' : 'Sign up';
+  document.querySelector('.auth-btn.ghost').textContent =
+    authMode === 'signin' ? 'No account? Sign up' : 'Have an account? Sign in';
+  $('authSubtitle').style.display = 'none';
+}
+
+async function handleAuthSubmit() {
+  const email    = $('authEmail').value.trim();
+  const password = $('authPassword').value.trim();
+  if (!email || !password) { showAuthError('Email and password are required.'); return; }
+  const btn     = $('authSubmitBtn');
+  const spinner = $('authSpinner');
+  btn.disabled = true; spinner.style.display = 'block';
+  $('authSubtitle').style.display = 'none';
+  const fn = authMode === 'signin'
+    ? supabase.auth.signInWithPassword({ email, password })
+    : supabase.auth.signUp({ email, password });
+  const { data, error } = await fn;
+  btn.disabled = false; spinner.style.display = 'none';
+  if (error) { showAuthError(error.message); return; }
+  if (authMode === 'signup' && !data.session) {
+    showAuthError('Check your email to confirm your account.'); return;
+  }
+}
+
+function showAuthError(msg) {
+  const el = $('authSubtitle');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function handleStart() {
+  const goal = $('goal-input').value.trim();
+  if (!goal) { showNotif('Please enter a goal first.'); return; }
+  if (S.running) { showNotif('Already running — wait for tasks to complete.'); return; }
+  const ceoKey = S.keys[S.cfg.CEO.provider];
+  if (!ceoKey) {
+    showNotif(`No ${PROVS[S.cfg.CEO.provider].name} API key. Open Settings.`);
+    openSettings();
+    return;
+  }
+  S.tasks = []; S.logs = []; S.tc = 1; S.selTask = null;
+  S.timeSaved = 0; activeExecutors = 0;
+  Object.keys(S.live).forEach(k => S.live[k] = 0);
+  S.running = true;
+  S.runStart = Date.now();
+  $('goal-input').disabled = true;
+  $('run-btn').disabled    = true;
+  $('run-ind').style.display = 'flex';
+  $('polish-btn').style.display = 'none';
+  refreshBoard();
+  updStats();
+  setTab('logs');
+  try {
+    await runCEO(goal);
+    // wait for all executors to finish
+    await new Promise(res => {
+      const iv = setInterval(() => {
+        if (activeExecutors === 0) { clearInterval(iv); res(); }
+      }, 400);
+    });
+  } finally {
+    S.running = false;
+    $('goal-input').disabled = false;
+    $('run-btn').disabled    = false;
+    $('run-ind').style.display = 'none';
+    refreshBoard();
+    updStats();
+    addLog('CEO','success','All tasks complete.');
+  }
+}
+
+// ── Real-time self-write guard ───────────────────────────────
+const recentWrites = new Set();
+function markRecentWrite(displayId) {
+  recentWrites.add(displayId);
+  setTimeout(() => recentWrites.delete(displayId), 3000);
+}
+
+// ── Supabase init ────────────────────────────────────────────
+async function initSupabase() {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_OUT' || !session) {
+      currentUserId = null; showAuthScreen(); return;
+    }
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+      currentUserId = session.user.id;
+      await loadFromSupabase();
+      hideAuthScreen();
+      refreshBoard(); updStats(); renderPanel();
+    }
+  });
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) showAuthScreen();
+}
+
+async function loadFromSupabase() {
+  if (!supabase || !currentUserId) return;
+  const { data: profile } = await supabase
+    .from('user_profiles').select('agent_configs, time_saved')
+    .eq('user_id', currentUserId).single();
+  if (profile) {
+    if (profile.agent_configs && Object.keys(profile.agent_configs).length > 0)
+      S.cfg = { ...JSON.parse(JSON.stringify(DEF_CFG)), ...profile.agent_configs };
+    S.timeSaved = profile.time_saved || 0;
+  } else {
+    await supabase.from('user_profiles').insert({
+      user_id: currentUserId, time_saved: 0, agent_configs: {}
+    }).catch(()=>{});
+  }
+  const { data: taskRows, error: taskErr } = await supabase
+    .from('tasks').select('*').eq('user_id', currentUserId)
+    .order('created_at', { ascending: true });
+  if (!taskErr && taskRows) {
+    S.tasks = taskRows.map(mapTask);
+    const maxNum = taskRows.reduce((max, row) => {
+      const n = parseInt((row.display_id||'').replace(/\D/g,''), 10);
+      return isNaN(n) ? max : Math.max(max, n);
+    }, 0);
+    S.tc = Math.max(maxNum + 1, S.tasks.length + 1);
+    S.tasks.forEach(t => {
+      if (t.status === 'in_progress') {
+        t.status = 'blocked';
+        dbUpsertTask(t).catch(()=>{});
+      }
+    });
+  }
+  const { data: logRows } = await supabase
+    .from('logs').select('message, created_at')
+    .eq('user_id', currentUserId)
+    .order('created_at', { ascending: false }).limit(100);
+  if (logRows) {
+    S.logs = logRows.map(r => ({
+      msg: r.message, type:'info',
+      ts: new Date(r.created_at).toLocaleTimeString()
+    }));
+  }
+  loadKeysFromStorage();
+  subscribeToChanges();
+}
+
+function subscribeToChanges() {
+  if (!supabase || !currentUserId) return;
+  supabase.channel(`tasks:${currentUserId}`)
+    .on('postgres_changes', {
+      event:'*', schema:'public', table:'tasks',
+      filter: `user_id=eq.${currentUserId}`
+    }, payload => {
+      const row = payload.new; if (!row) return;
+      if (recentWrites.has(row.display_id)) return;
+      const idx = S.tasks.findIndex(t => t.id === row.display_id);
+      const mapped = mapTask(row);
+      if (payload.eventType === 'DELETE') { if (idx !== -1) S.tasks.splice(idx, 1); }
+      else if (idx !== -1) S.tasks[idx] = mapped;
+      else S.tasks.push(mapped);
+      refreshBoard(); updStats();
+    })
+    .subscribe();
+}
+
+async function signOut() {
+  await supabase.auth.signOut();
+  S.tasks=[]; S.logs=[]; S.tc=1; S.timeSaved=0; currentUserId=null;
+  refreshBoard(); updStats();
+  showAuthScreen();
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  loadKeysFromStorage();
+  const now = new Date();
+  const h = now.getHours();
+  $('tb-time').textContent = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+  $('sb-day').textContent  = now.toLocaleDateString('en',{weekday:'long',month:'short',day:'numeric'});
+  document.querySelectorAll('.nav-item[data-view]').forEach(el => {
+    el.addEventListener('click', () => setView(el.dataset.view));
+  });
+  document.querySelectorAll('.ptab[data-tab]').forEach(el => {
+    el.addEventListener('click', () => setTab(el.dataset.tab));
+  });
+  document.querySelectorAll('.ft[data-f]').forEach(el => {
+    el.addEventListener('click', () => setFilter(el.dataset.f));
+  });
+  $('goal-input').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') handleStart();
+  });
+  Object.entries(S.live).forEach(([aid, c]) => {
+    const le = $(`live-${aid}`);
+    if (le) le.style.display = c > 0 ? 'flex' : 'none';
+  });
+  setView('board'); setTab('logs'); updStats(); refreshBoard();
+  await initSupabase();
+});
+</script>
 </body>
 </html>
