@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentOS v4.5</title>
+  <link rel="stylesheet" href="css.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- LEFT SIDEBAR -->
+    <aside id="sidebar">
+      <div id="logo">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">AgentOS <em>v4.5</em></span>
+      </div>
+
+      <nav id="main-nav">
+        <button class="nav-btn active" data-view="board" onclick="setView('board')">⊞ Board</button>
+        <button class="nav-btn" data-view="output" onclick="setView('output')">⬒ Output</button>
+      </nav>
+
+      <div id="agent-list">
+        <!-- rendered by renderAgentList() -->
+      </div>
+
+      <div id="agent-cfg">
+        <!-- rendered by renderAgentCfg() -->
+      </div>
+
+      <div id="sidebar-footer">
+        <button id="settings-btn" onclick="openSettings()">⚙ Settings</button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main id="main">
+      <!-- Topbar -->
+      <div id="topbar">
+        <input
+          id="search-input"
+          type="text"
+          placeholder="Search tasks…"
+          oninput="onSearch(this.value)"
+        >
+        <div id="topbar-actions">
+          <button id="polish-btn" class="btn-polish hidden" onclick="polishAndCombine()">
+            <span id="polish-spin" class="spin hidden">⟳</span>
+            ★ Polish &amp; Combine
+          </button>
+          <button id="start-btn" class="btn-start" onclick="handleStart()">
+            ▶ Start
+          </button>
+        </div>
+      </div>
+
+      <!-- Goal input -->
+      <div id="goal-area">
+        <textarea
+          id="goal-input"
+          placeholder="Describe your goal… e.g. Write a competitive analysis for a new SaaS product"
+          rows="3"
+        ></textarea>
+        <div id="type-radios">
+          <label><input type="radio" name="taskType" value="auto" checked onchange="S.taskType='auto'"> Auto</label>
+          <label><input type="radio" name="taskType" value="write" onchange="S.taskType='write'"> Write</label>
+          <label><input type="radio" name="taskType" value="code"  onchange="S.taskType='code'"> Code</label>
+          <label><input type="radio" name="taskType" value="research" onchange="S.taskType='research'"> Research</label>
+          <label><input type="radio" name="taskType" value="plan"  onchange="S.taskType='plan'"> Plan</label>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div id="stats-row">
+        <div class="stat-card" id="stat-time">
+          <span class="stat-val" id="stat-time-val">0m</span>
+          <span class="stat-label">Time Saved</span>
+        </div>
+        <div class="stat-card" id="stat-done">
+          <span class="stat-val" id="stat-done-val">0</span>
+          <span class="stat-label">Completed</span>
+        </div>
+        <div class="stat-card" id="stat-prog">
+          <span class="stat-val" id="stat-prog-val">0</span>
+          <span class="stat-label">In Progress</span>
+        </div>
+        <div class="stat-card" id="stat-live">
+          <span class="stat-val" id="stat-live-val">0</span>
+          <span class="stat-label">Agents Live</span>
+        </div>
+      </div>
+
+      <!-- Filter tabs -->
+      <div id="filter-tabs">
+        <button class="filter-btn active" data-filter="all"         onclick="setFilter('all')">ALL</button>
+        <button class="filter-btn"        data-filter="todo"        onclick="setFilter('todo')">Todo</button>
+        <button class="filter-btn"        data-filter="in_progress" onclick="setFilter('in_progress')">In Progress</button>
+        <button class="filter-btn"        data-filter="done"        onclick="setFilter('done')">Done</button>
+        <button class="filter-btn"        data-filter="blocked"     onclick="setFilter('blocked')">Blocked</button>
+      </div>
+
+      <!-- Task board -->
+      <div id="task-board">
+        <!-- rendered by renderTaskBoard() -->
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL -->
+    <aside id="right-panel">
+      <div id="panel-tabs">
+        <button class="panel-tab active" data-tab="logs"   onclick="setPanelTab('logs')">Logs</button>
+        <button class="panel-tab"        data-tab="output" onclick="setPanelTab('output')">Output</button>
+      </div>
+      <div id="panel-body">
+        <!-- rendered by renderRightPanel() -->
+      </div>
+    </aside>
+
+  </div><!-- #app -->
+
+  <!-- ═══════════════════════════════════════
+       OUTPUT MODAL
+  ════════════════════════════════════════ -->
+  <div id="outputModal" class="modal-overlay hidden" onclick="handleModalClick(event)">
+    <div class="modal-box" id="outputModalBox">
+      <div class="modal-header">
+        <h2 id="modal-title">Output</h2>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <details id="modal-instruction-wrap">
+        <summary>Instruction</summary>
+        <p id="modal-instruction"></p>
+      </details>
+      <div id="modal-content">
+        <!-- rendered by renderModalOutput() -->
+      </div>
+      <div class="modal-footer">
+        <button id="modal-copy-btn"  class="btn-secondary" onclick="copyModalContent()">⧉ Copy</button>
+        <button id="modal-save-btn"  class="btn-secondary" onclick="downloadModalContent()">⬇ Save .md</button>
+        <button class="btn-secondary" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       SETTINGS MODAL
+  ════════════════════════════════════════ -->
+  <div id="settingsModal" class="modal-overlay hidden" onclick="handleSettingsClick(event)">
+    <div class="modal-box" id="settingsModalBox">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="modal-close" onclick="closeSettings()">✕</button>
+      </div>
+      <div id="settings-body">
+        <h3>API Keys</h3>
+        <div class="settings-field">
+          <label>DeepSeek</label>
+          <input type="password" id="key-deepseek" placeholder="sk-…">
+        </div>
+        <div class="settings-field">
+          <label>Gemini</label>
+          <input type="password" id="key-gemini" placeholder="AIza…">
+        </div>
+        <div class="settings-field">
+          <label>OpenRouter</label>
+          <input type="password" id="key-openrouter" placeholder="sk-or-…">
+        </div>
+        <div class="settings-field">
+          <label>Groq</label>
+          <input type="password" id="key-groq" placeholder="gsk_…">
+        </div>
+        <div class="settings-field">
+          <label>Cloudflare Token</label>
+          <input type="password" id="key-cloudflare" placeholder="Token">
+        </div>
+        <div class="settings-field">
+          <label>Cloudflare Account ID</label>
+          <input type="text" id="key-cfAcct" placeholder="Account ID">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" onclick="saveSettings()">Save</button>
+        <button class="btn-secondary" onclick="closeSettings()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       FAILURE MODAL
+  ════════════════════════════════════════ -->
+  <div id="failModal" class="modal-overlay hidden">
+    <div class="modal-box modal-box--sm">
+      <div class="modal-header">
+        <h2>Task Failed</h2>
+      </div>
+      <p id="fail-msg"></p>
+      <div class="modal-footer">
+        <button class="btn-danger"    onclick="resolveFailure('retry')">⟳ Retry with Fallback</button>
+        <button class="btn-secondary" onclick="resolveFailure('skip')">Skip</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION BAR -->
+  <div id="notification" class="notification hidden"></div>
+
+  <script src="state.js"></script>
+  <script src="prompts.js"></script>
+  <script src="core.js"></script>
+  <script src="engine.js"></script>
+  <script src="ui.js"></script>
+  <script src="init.js"></script>
+</body>
+</html>

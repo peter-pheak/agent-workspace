@@ -1,0 +1,11 @@
+name = "agent-workspace"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[kv_namespaces]]
+binding = "WORKSPACE_KV"
+id = "4baac930c19943e98751336ea19eecbc"
