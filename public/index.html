@@ -651,7 +651,7 @@ function loadKeysFromStorage() {
 
 async function saveTimeSaved() {
   if (!supabase || !currentUserId) return;
-  await supabase.from('user_profiles')
+  await sb.from('user_profiles')
     .update({ time_saved: S.timeSaved })
     .eq('user_id', currentUserId)
     .catch(e => console.error('saveTimeSaved error:', e.message));
@@ -677,7 +677,7 @@ function truncateForDB(content) {
 async function dbUpsertTask(task) {
   if (!supabase || !currentUserId) return;
   markRecentWrite(task.id);
-  const { error } = await supabase.from('tasks').upsert({
+  const { error } = await sb.from('tasks').upsert({
     user_id: currentUserId, display_id: task.id,
     title: task.title, instruction: task.instruction,
     assignee: task.assignee, status: task.status,
@@ -690,14 +690,14 @@ async function dbUpsertTask(task) {
   if (error) {
     if (error.code === 'PGRST301' || (error.message && error.message.includes('JWT'))) {
       showNotif('Session expired – please log in again.');
-      await supabase.auth.refreshSession().catch(()=>{});
+      await sb.auth.refreshSession().catch(()=>{});
     } else { console.error('dbUpsertTask error:', error.message); }
   }
 }
 
 async function saveAgentConfig() {
   if (!supabase || !currentUserId) return;
-  const { error } = await supabase.from('user_profiles').upsert({
+  const { error } = await sb.from('user_profiles').upsert({
     user_id: currentUserId, agent_configs: S.cfg
   }, { onConflict: 'user_id' });
   if (error) console.error('saveAgentConfig error:', error.message);
@@ -1714,8 +1714,8 @@ async function handleAuthSubmit() {
   btn.disabled = true; spinner.style.display = 'block';
   $('authSubtitle').style.display = 'none';
   const fn = authMode === 'signin'
-    ? supabase.auth.signInWithPassword({ email, password })
-    : supabase.auth.signUp({ email, password });
+    ? sb.auth.signInWithPassword({ email, password })
+    : sb.auth.signUp({ email, password });
   const { data, error } = await fn;
   btn.disabled = false; spinner.style.display = 'none';
   if (error) { showAuthError(error.message); return; }
@@ -1780,7 +1780,7 @@ function markRecentWrite(displayId) {
 // ── Supabase init ────────────────────────────────────────────
 async function initSupabase() {
   supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_OUT' || !session) {
       currentUserId = null; showAuthScreen(); return;
     }
@@ -1791,7 +1791,7 @@ async function initSupabase() {
       refreshBoard(); updStats(); renderPanel();
     }
   });
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await sb.auth.getSession();
   if (!session) showAuthScreen();
 }
 
@@ -1805,7 +1805,7 @@ async function loadFromSupabase() {
       S.cfg = { ...JSON.parse(JSON.stringify(DEF_CFG)), ...profile.agent_configs };
     S.timeSaved = profile.time_saved || 0;
   } else {
-    await supabase.from('user_profiles').insert({
+    await sb.from('user_profiles').insert({
       user_id: currentUserId, time_saved: 0, agent_configs: {}
     }).catch(()=>{});
   }
@@ -1860,7 +1860,7 @@ function subscribeToChanges() {
 }
 
 async function signOut() {
-  await supabase.auth.signOut();
+  await sb.auth.signOut();
   S.tasks=[]; S.logs=[]; S.tc=1; S.timeSaved=0; currentUserId=null;
   refreshBoard(); updStats();
   showAuthScreen();
