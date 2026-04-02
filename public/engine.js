@@ -106,18 +106,33 @@ async function runExecutor(task) {
     }
 
     if (!raw) {
-      const action = await new Promise(resolve => {
-        S.failResolve = resolve;
-        showFailModal(task, `${agentId} returned no content.`);
-      });
+      // Automatic fallback cycle for transient “no content” situations
+      let fallbackProvider = _nextFallback(S.cfg[agentId].provider);
+      const originalProvider = S.cfg[agentId].provider;
+      while (!raw && fallbackProvider) {
+        addLog(`${agentId}: no content - trying fallback provider ${fallbackProvider}`, 'warn');
+        S.cfg[agentId].provider = fallbackProvider;
+        raw = await callFO(agentId, userMessage, task, maxTokens);
+        S.cfg[agentId].provider = originalProvider;
 
-      if (action === 'retry') {
-        const fallbackProvider = _nextFallback(S.cfg[agentId].provider);
-        if (fallbackProvider) {
-          const savedProvider = S.cfg[agentId].provider;
-          S.cfg[agentId].provider = fallbackProvider;
-          raw = await callFO(agentId, userMessage, task, maxTokens);
-          S.cfg[agentId].provider = savedProvider;
+        if (raw) break;
+        fallbackProvider = _nextFallback(fallbackProvider);
+      }
+
+      if (!raw) {
+        const action = await new Promise(resolve => {
+          S.failResolve = resolve;
+          showFailModal(task, `${agentId} returned no content.`);
+        });
+
+        if (action === 'retry') {
+          const fallbackProvider = _nextFallback(S.cfg[agentId].provider);
+          if (fallbackProvider) {
+            const savedProvider = S.cfg[agentId].provider;
+            S.cfg[agentId].provider = fallbackProvider;
+            raw = await callFO(agentId, userMessage, task, maxTokens);
+            S.cfg[agentId].provider = savedProvider;
+          }
         }
       }
 
