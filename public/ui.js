@@ -309,6 +309,47 @@ function copyTaskContent(taskId) {
   navigator.clipboard.writeText(task.content).then(() => showNotification('Copied'));
 }
 
+async function syncToDisk() {
+  if (!S.tasks.length) {
+    showNotification('No tasks to sync.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tasks: S.tasks })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showNotification(`Sync complete: ${data.filesWritten?.length || 0} file(s)`);
+    } else {
+      showNotification(`Sync failed: ${data.error || 'Unknown error'}`);
+    }
+  } catch (err) {
+    showNotification(`Sync failed: ${err.message}`);
+  }
+}
+
+function downloadZip() {
+  const payload = {
+    tasks: S.tasks,
+    time_saved: S.timeSaved,
+    cfg: S.cfg,
+    keys: S.keys
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'agentos_export.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotification('Download ready (JSON).');
+}
+
 /* ── Settings modal ── */
 function openSettings() {
   const el = id => document.getElementById(id);

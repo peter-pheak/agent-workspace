@@ -73,9 +73,25 @@ function setLive(agentId, delta) {
   render();
 }
 
+function persistTask(task) {
+  if (!task?.id) return;
+  fetch('/api/save-task', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(task)
+  }).catch(() => { /* best-effort */ });
+}
+
 function updateTask(id, patch) {
   const t = S.tasks.find(x => x.id === id);
-  if (t) { Object.assign(t, patch); saveToStorage(); }
+  if (t) {
+    Object.assign(t, patch);
+    saveToStorage();
+    persistTask({
+      ...t,
+      depends_on: Array.isArray(t.depends_on) ? t.depends_on : [],
+    });
+  }
 }
 
 function addLog(msg, type = 'info') {

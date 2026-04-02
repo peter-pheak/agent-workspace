@@ -48,34 +48,39 @@ function showNotification(msg, duration = 3000) {
 }
 
 async function callFO(agentId, userMessage, task, maxTokens) {
-  const cfg      = S.cfg[agentId];
+  const cfg = S.cfg[agentId];
   const provider = cfg.provider;
-  const apiKey   = provider === 'gemini'
-    ? S.keys.gemini
-    : provider === 'cloudflare'
-      ? S.keys.cloudflare
-      : S.keys[provider];
+  const apiKeys = {
+    deepseek: S.keys.deepseek,
+    gemini: S.keys.gemini,
+    openrouter: S.keys.openrouter,
+    groq: S.keys.groq,
+    cloudflare: S.keys.cloudflare,
+    cloudflareAccountId: S.keys.cfAcct
+  };
 
-  if (!apiKey) {
+  if (!apiKeys[provider] && provider !== 'cloudflare') {
     showNotification(`No ${provider} API key. Open Settings.`);
     return null;
   }
 
-  /* Gemini uses key as query param, not Authorization header */
-  const url = provider === 'gemini'
-    ? buildGeminiURL(cfg.model, apiKey)
-    : getProviderURL(provider, cfg.model, S.keys.cfAcct);
-
-  const body    = buildRequestBody(provider, agentId, userMessage, maxTokens);
-  const headers = provider === 'gemini'
-    ? { 'Content-Type': 'application/json' }
-    : buildHeaders(provider, apiKey);
+  const body = {
+    provider,
+    model: cfg.model,
+    systemPrompt: PROMPTS[agentId] || '',
+    userMessage,
+    apiKeys,
+    maxTokens
+  };
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res  = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
 
-      /* Rate-limit handling */
       if (res.status === 429) {
         showNotification(`Rate limited by ${provider}. Waiting 60s before retry.`, 62000);
         await _countdown(60);
@@ -83,15 +88,12 @@ async function callFO(agentId, userMessage, task, maxTokens) {
       }
 
       const data = await res.json();
-      if (!res.ok) {
-        const msg = data?.error?.message || `HTTP ${res.status}`;
-        if (res.status === 404) throw new Error('Model not found. Check model name in Agents tab.');
-        throw new Error(msg);
+      if (!data.success) {
+        throw new Error(data.error || `Error from ${provider}`);
       }
 
-      const content = extractContent(provider, data);
-      if (!content) throw new Error('No content returned. Model may be rate limited.');
-      return content;
+      if (!data.content) throw new Error('No content returned from provider.');
+      return data.content;
 
     } catch (err) {
       if (attempt === 3) {
