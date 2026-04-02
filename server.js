@@ -2,6 +2,7 @@ const express = require('express');
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const { exec } = require('child_process');  // NEW for terminal
 
 const app = express();
 app.use(express.json({ limit: '12mb' }));
@@ -443,6 +444,73 @@ app.post('/api/sync', (req, res) => {
     return res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// ==================== STEP 1: NEW TOOLS ====================
+
+// TOOL 1: Read any file in the workspace
+app.get('/api/read-file', (req, res) => {
+  const filePath = req.query.path;
+  if (!filePath) return res.status(400).json({ error: 'Missing path parameter' });
+
+  const fullPath = path.resolve(currentWorkspacePath, filePath);
+  if (!fullPath.startsWith(currentWorkspacePath)) {
+    return res.status(403).json({ error: 'Access denied – path outside workspace' });
+  }
+
+  try {
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    res.json({ content });
+  } catch (err) {
+    res.status(404).json({ error: 'File not found or unreadable' });
+  }
+});
+
+// TOOL 2: Generate a Project Map (Tree)
+app.get('/api/tree', (req, res) => {
+  function getTree(dir) {
+    let results = [];
+    if (!fs.existsSync(dir)) return results;
+    const list = fs.readdirSync(dir, { withFileTypes: true });
+    for (const item of list) {
+      if (item.name === 'node_modules' || item.name === '.git' || item.name === '.DS_Store') continue;
+      const itemPath = path.join(dir, item.name);
+      if (item.isDirectory()) {
+        results.push({
+          type: 'folder',
+          name: item.name,
+          children: getTree(itemPath)
+        });
+      } else {
+        results.push({ type: 'file', name: item.name });
+      }
+    }
+    return results;
+  }
+
+  try {
+    const tree = getTree(currentWorkspacePath);
+    res.json({ tree });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not generate tree: ' + err.message });
+  }
+});
+
+// TOOL 3: Terminal Execution
+app.post('/api/terminal', (req, res) => {
+  const { command } = req.body;
+  if (!command || typeof command !== 'string') {
+    return res.status(400).json({ error: 'Missing command' });
+  }
+
+  exec(command, { cwd: currentWorkspacePath, timeout: 30000 }, (error, stdout, stderr) => {
+    if (error) {
+      return res.json({ success: false, output: (stderr || error.message).slice(0, 5000) });
+    }
+    res.json({ success: true, output: stdout.slice(0, 5000) });
+  });
+});
+
+// ============================================================
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {

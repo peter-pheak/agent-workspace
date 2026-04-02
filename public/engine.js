@@ -194,9 +194,31 @@ async function runCEO(goal) {
   setLive(agentId, +1);
   addLog(`CEO planning: ${goal.slice(0, 60)}…`, 'info');
 
+  // --- STEP 2: Fetch workspace tree for "God View" ---
+  let projectTreeStr = '';
+  try {
+    const treeRes = await fetch('/api/tree');
+    if (treeRes.ok) {
+      const treeData = await treeRes.json();
+      projectTreeStr = JSON.stringify(treeData.tree, null, 2);
+      addLog(`CEO: Loaded workspace tree (${treeData.tree.length} root items)`, 'info');
+    } else {
+      console.warn('Could not fetch project tree');
+    }
+  } catch (e) {
+    console.warn('Tree fetch error:', e);
+  }
+
+  // Build custom system prompt with tree injection
+  let customSystemPrompt = PROMPTS.CEO;
+  if (projectTreeStr) {
+    customSystemPrompt += `\n\n### CURRENT WORKSPACE MAP (Directory Tree):\n\`\`\`json\n${projectTreeStr}\n\`\`\`\nUse this map to understand the project structure before assigning tasks. Do NOT create files or folders that already exist unless explicitly required.`;
+  }
+
   try {
     const userMessage = buildCEOMessage(goal, S.taskType);
-    const raw         = await callFO(agentId, userMessage, null, maxTokens);
+    // Pass customSystemPrompt to callFO (5th parameter)
+    const raw = await callFO(agentId, userMessage, null, maxTokens, customSystemPrompt);
 
     if (!raw) {
       addLog('CEO returned no response', 'error');
@@ -240,19 +262,16 @@ async function runCEO(goal) {
 
     saveToStorage();
 
-    // KEY FIX: clear S.running BEFORE evaluateTaskQueue so it can dispatch executors.
-    // evaluateTaskQueue no longer gates on S.running, but runCEO guard still needs reset.
     S.running = false;
     setLive(agentId, -1);
     render();
     await evaluateTaskQueue();
-    return; // early return — skip finally cleanup (already done above)
+    return;
 
   } catch (err) {
     addLog(`CEO error: ${err.message}`, 'error');
     showNotification(`CEO error: ${err.message}`);
   } finally {
-    // Only runs on error path — the happy path returned early above
     if (S.running) {
       S.running = false;
       setLive(agentId, -1);

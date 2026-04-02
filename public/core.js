@@ -53,7 +53,7 @@ function showNotification(msg, duration = 3000) {
   _notifTimer = setTimeout(() => el.classList.add('hidden'), duration);
 }
 
-async function callFO(agentId, userMessage, task, maxTokens) {
+async function callFO(agentId, userMessage, task, maxTokens, customSystemPrompt = null) {
   const cfg = S.cfg[agentId];
   const provider = cfg.provider;
   const apiKeys = {
@@ -70,10 +70,13 @@ async function callFO(agentId, userMessage, task, maxTokens) {
     return null;
   }
 
+  // Use custom prompt if provided, otherwise default from PROMPTS
+  const systemPrompt = customSystemPrompt !== null ? customSystemPrompt : (PROMPTS[agentId] || '');
+
   const body = {
     provider,
     model: cfg.model,
-    systemPrompt: PROMPTS[agentId] || '',
+    systemPrompt,
     userMessage,
     apiKeys,
     maxTokens
