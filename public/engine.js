@@ -12,6 +12,8 @@ async function yieldToUI() {
 async function evaluateTaskQueue() {
   // S.running guards CEO phase only — do NOT gate on it here
   let stateChanged = false;                                    // FIX 1
+  let evalLoopCount = 0;
+  const THROTTLE_BATCH = 8;
 
   const tasksToCheck = S.tasks.filter(t =>
     t.status === 'todo' || t.status === 'waiting' || t.status === 'blocked'
@@ -72,7 +74,10 @@ async function evaluateTaskQueue() {
       }
     }
 
-    await yieldToUI();
+    evalLoopCount++;
+    if (evalLoopCount % THROTTLE_BATCH === 0) {
+      await yieldToUI();
+    }
   }
 
   if (stateChanged) evaluateTaskQueue();                       // FIX 1 — recursive re-run

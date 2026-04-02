@@ -1,5 +1,8 @@
 function extractJSON(raw) {
   if (!raw) return null;
+  if (raw.length > 300000) {
+    raw = raw.slice(0, 300000) + '\n\n{"warning":"output truncated for parse safety"}';
+  }
   try {
     let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
     text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
@@ -22,6 +25,9 @@ function extractJSON(raw) {
 
 function extractDeliverable(raw) {
   if (!raw) return null;
+  if (raw.length > 400000) {
+    raw = raw.slice(0, 400000) + '\n\n... [truncated] ...';
+  }
   let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
   const thoughtMatch = text.match(/<thought>([\s\S]*?)<\/thought>/i);
   const titleMatch   = text.match(/<title>([\s\S]*?)<\/title>/i);

@@ -106,6 +106,11 @@ function renderTaskBoard() {
     return;
   }
 
+  if (tasks.length > 600) {
+    tasks = tasks.slice(0, 600);
+    showNotification('Rendering limited to first 600 tasks for performance. Use search/filter to narrow down.', 4000);
+  }
+
   el.innerHTML = tasks.map(renderTaskCard).join('');
 }
 
@@ -165,6 +170,9 @@ function renderOutputItem(task) {
 /* ── Markdown renderer — exact 11-step order ── */
 function renderMarkdown(raw) {
   if (!raw) return '';
+  if (raw.length > 250000) {
+    raw = raw.slice(0, 250000) + '\n\n... [output truncated for UI performance] ...';
+  }
   let html = raw;
   const codeBlocks = [];
 
