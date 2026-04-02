@@ -475,6 +475,7 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 // initSupabase() overwrites it with the client instance via:
 //   supabase = window.supabase.createClient(...)
 // Do NOT redeclare it with let/const here — that causes a SyntaxError.
+let sb = null;
 let currentUserId = null;
 
 const PROVS = {
