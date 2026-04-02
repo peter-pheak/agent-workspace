@@ -25,9 +25,10 @@
         <!-- rendered by renderAgentList() -->
       </div>
       
+      <!-- PROJECT CONTEXT (READING FILES) -->
       <div class="sb-section">Project Context</div>
       <div id="project-context-list" style="padding: 8px; max-height: 150px; overflow-y: auto; background: var(--main); border-radius: 8px; margin: 0 8px;">
-        <!-- Checkboxes will load here -->
+        <!-- Checkboxes loaded by loadProjectContext() -->
       </div>
       <button class="sb-btn" onclick="loadProjectContext()" style="margin-top:4px;">
         <span>🔄</span> Refresh Files
@@ -46,12 +47,22 @@
     <main id="main">
       <!-- Topbar -->
       <div id="topbar">
+        <!-- NEW: Workspace Selector -->
+        <div id="workspace-controls" style="display: flex; gap: 8px; align-items: center;">
+          <select id="workspace-select" onchange="switchWorkspace(this.value)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--main); font-size: 13px; font-weight: 500; outline: none; cursor: pointer;">
+            <!-- Options populated by loadWorkspaces() -->
+          </select>
+          <button class="btn-secondary" onclick="createNewProject()" style="padding: 6px 12px; font-size: 12px;">+ New Project</button>
+        </div>
+
         <input
           id="search-input"
           type="text"
           placeholder="Search tasks…"
           oninput="onSearch(this.value)"
+          style="margin-left: auto; max-width: 200px;"
         >
+        
         <div id="topbar-actions">
           <button class="btn-secondary" onclick="downloadZip()">📦 Download ZIP</button>
           <button class="btn-secondary" onclick="syncToDisk()">💻 Sync to Disk</button>
@@ -195,6 +206,10 @@
           <input type="text" id="sync-path-input" class="sinput" placeholder="e.g., E:/MyProjects/NewApp">
           <small>Absolute path where the 'Sync to Disk' button will save your code.</small>
         </div>
+        <div class="settings-field" style="margin-top: 10px;">
+           <button class="btn-danger" onclick="confirmClearWorkspaceDisk()" style="font-size: 11px; padding: 4px 8px;">🗑 Wipe Physical Workspace Folder</button>
+           <small style="display: block; margin-top: 4px; color: var(--red);">Warning: This deletes all files in the sync folder.</small>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn-primary" onclick="saveSettings()">Save</button>
@@ -222,6 +237,7 @@
   <!-- NOTIFICATION BAR -->
   <div id="notification" class="notification hidden"></div>
 
+  <!-- STITCHED MODULES -->
   <script src="state.js"></script>
   <script src="prompts.js"></script>
   <script src="core.js"></script>

@@ -7,10 +7,11 @@ function render() {
   renderRightPanel();
   renderPolishBtn();
   renderNavActive();
+  renderWorkspaceDropdown(); // NEW: Keeps the project list in sync
 }
 
 async function loadProjectContext() {
-    const container = $('project-context-list');
+    const container = document.getElementById('project-context-list');
     if (!container) return;
     container.innerHTML = '<div style="font-size:11px; color:var(--dim); text-align:center;">Loading...</div>';
     
@@ -29,8 +30,94 @@ async function loadProjectContext() {
     }
 }
 
-// Add this to your DOMContentLoaded event so it loads on startup:
-// loadProjectContext();
+/* ── Workspace Management ── */
+
+async function renderWorkspaceDropdown() {
+  const select = document.getElementById('workspace-select');
+  if (!select) return;
+
+  if (S.workspaces.length === 0) {
+    select.innerHTML = `<option value="1">Default Project</option>`;
+    return;
+  }
+
+  select.innerHTML = S.workspaces.map(ws => 
+    `<option value="${ws.id}" ${S.currentWorkspaceId == ws.id ? 'selected' : ''}>${_esc(ws.name)}</option>`
+  ).join('');
+}
+
+async function switchWorkspace(id) {
+  const wsId = parseInt(id);
+  if (S.running || S.polishing) {
+    showNotification('Cannot switch projects while agents are running.');
+    renderWorkspaceDropdown(); // Reset dropdown
+    return;
+  }
+  
+  S.currentWorkspaceId = wsId;
+  localStorage.setItem('agentos_workspace', wsId);
+  
+  showNotification('Switching project...');
+  // loadFromSQLite is defined in init.js
+  await loadFromSQLite(wsId);
+  render();
+}
+
+async function createNewProject() {
+  const name = prompt("Enter a name for the new project:");
+  if (!name) return;
+
+  try {
+    const res = await fetch('/api/workspaces', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      // 1. Update Workspace List
+      const listRes = await fetch('/api/workspaces');
+      const listData = await listRes.json();
+      S.workspaces = listData.workspaces;
+      
+      // 2. Switch to the new ID
+      S.currentWorkspaceId = data.workspace.id;
+      localStorage.setItem('agentos_workspace', S.currentWorkspaceId);
+      
+      // 3. Optional: Wipe the physical disk folder for a fresh start
+      if (confirm("Start with a clean folder? (Deletes all files in the sync workspace)")) {
+        await fetch('/api/clear-workspace-disk', { method: 'POST' });
+      }
+      
+      // 4. Reset Board
+      S.tasks = [];
+      S.tc = 1;
+      S.timeSaved = 0;
+      
+      showNotification(`Created project: ${name}`);
+      render();
+    }
+  } catch (err) {
+    showNotification('Failed to create project: ' + err.message);
+  }
+}
+
+async function confirmClearWorkspaceDisk() {
+  if (!confirm("⚠️ DANGER: This will delete ALL files in your local sync folder on your E: drive. Continue?")) return;
+  
+  try {
+    const res = await fetch('/api/clear-workspace-disk', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showNotification('Local folder wiped clean.');
+    }
+  } catch (err) {
+    showNotification('Wipe failed: ' + err.message);
+  }
+}
+
+/* ── Standard UI Logic ── */
 
 function renderNavActive() {
   document.querySelectorAll('.nav-btn').forEach(b => {
@@ -51,7 +138,6 @@ function renderPolishBtn() {
   }
 }
 
-/* ── Stats ── */
 function renderStats() {
   const done    = S.tasks.filter(t => t.status === 'done').length;
   const inProg  = S.tasks.filter(t => t.status === 'in_progress').length;
@@ -63,7 +149,6 @@ function renderStats() {
   if (el('stat-live-val')) el('stat-live-val').textContent = live;
 }
 
-/* ── Agent list (sidebar dots + live counts) ── */
 function renderAgentList() {
   const el = document.getElementById('agent-list');
   if (!el) return;
@@ -80,7 +165,6 @@ function renderAgentList() {
   }).join('');
 }
 
-/* ── Agent cfg (provider + model + test per agent) ── */
 function renderAgentCfg() {
   const el = document.getElementById('agent-cfg');
   if (!el) return;
@@ -102,38 +186,19 @@ function renderAgentCfg() {
   }).join('');
 }
 
-/* ── Task board ── */
 function renderTaskBoard() {
   const el = document.getElementById('task-board');
   if (!el) return;
-
   let tasks = S.tasks.slice();
-
   if (S.searchQ) {
     const q = S.searchQ.toLowerCase();
-    tasks = tasks.filter(t =>
-      t.title.toLowerCase().includes(q) ||
-      t.instruction.toLowerCase().includes(q)
-    );
+    tasks = tasks.filter(t => t.title.toLowerCase().includes(q) || t.instruction.toLowerCase().includes(q));
   }
-
-  if (S.filter !== 'all') {
-    tasks = tasks.filter(t => t.status === S.filter);
-  }
-
+  if (S.filter !== 'all') tasks = tasks.filter(t => t.status === S.filter);
   if (tasks.length === 0) {
-    el.innerHTML = `<div class="empty-board">
-      <div class="empty-icon">⊞</div>
-      <div>${S.tasks.length === 0 ? 'Enter a goal and click Start' : 'No tasks match filter'}</div>
-    </div>`;
+    el.innerHTML = `<div class="empty-board"><div class="empty-icon">⊞</div><div>${S.tasks.length === 0 ? 'Enter a goal and click Start' : 'No tasks match filter'}</div></div>`;
     return;
   }
-
-  if (tasks.length > 600) {
-    tasks = tasks.slice(0, 600);
-    showNotification('Rendering limited to first 600 tasks for performance. Use search/filter to narrow down.', 4000);
-  }
-
   el.innerHTML = tasks.map(renderTaskCard).join('');
 }
 
@@ -141,7 +206,6 @@ function renderTaskCard(task) {
   const m      = AGENT_META[task.assignee] || AGENT_META.Writer;
   const status = task.status;
   const isLive = status === 'in_progress';
-
   return `<div class="task-card" onclick="openModal('${task.id}')">
     <div class="card-header">
       <span class="card-icon" style="color:${m.color}">${m.icon}</span>
@@ -154,12 +218,10 @@ function renderTaskCard(task) {
       <span class="card-date">${task.date}</span>
     </div>
     ${isLive ? `<div class="card-progress"><div class="card-progress-bar" style="width:60%"></div></div>` : ''}
-    ${status === 'blocked' ? `<button class="btn-copy-sm" style="margin-top:8px"
-      onclick="event.stopPropagation();retryTask('${task.id}')">⟳ Retry</button>` : ''}
+    ${status === 'blocked' ? `<button class="btn-copy-sm" style="margin-top:8px" onclick="event.stopPropagation();retryTask('${task.id}')">⟳ Retry</button>` : ''}
   </div>`;
 }
 
-/* ── Right panel ── */
 function renderRightPanel() {
   const el = document.getElementById('panel-body');
   if (!el) return;
@@ -167,19 +229,10 @@ function renderRightPanel() {
     b.classList.toggle('active', b.dataset.tab === S.tab);
   });
   if (S.tab === 'logs') {
-    el.innerHTML = S.logs.length === 0
-      ? '<div style="color:var(--muted);font-size:13px;padding:8px">No logs yet.</div>'
-      : S.logs.map(l =>
-          `<div class="log-entry">
-            <span class="log-ts">${l.ts}</span>
-            <span class="log-msg log-${l.type}">${_esc(l.msg)}</span>
-          </div>`
-        ).join('');
+    el.innerHTML = S.logs.length === 0 ? '<div style="color:var(--muted);font-size:13px;padding:8px">No logs yet.</div>' : S.logs.map(l => `<div class="log-entry"><span class="log-ts">${l.ts}</span><span class="log-msg log-${l.type}">${_esc(l.msg)}</span></div>`).join('');
   } else {
     const done = getDoneTasks();
-    el.innerHTML = done.length === 0
-      ? '<div style="color:var(--muted);font-size:13px;padding:8px">No completed outputs yet.</div>'
-      : done.map(renderOutputItem).join('');
+    el.innerHTML = done.length === 0 ? '<div style="color:var(--muted);font-size:13px;padding:8px">No completed outputs yet.</div>' : done.map(renderOutputItem).join('');
   }
 }
 
@@ -190,38 +243,21 @@ function renderOutputItem(task) {
   </div>`;
 }
 
-/* ── Markdown renderer — exact 11-step order ── */
+/* ── Markdown renderer ── */
 function renderMarkdown(raw) {
   if (!raw) return '';
-  if (raw.length > 250000) {
-    raw = raw.slice(0, 250000) + '\n\n... [output truncated for UI performance] ...';
-  }
   let html = raw;
   const codeBlocks = [];
-
-  // Step 1: Extract fenced code blocks FIRST (before any escaping)
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-    const escaped = code
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
     codeBlocks.push(`<pre style="background:#1e1e2e;color:#e0e0ee;padding:16px;border-radius:8px;overflow-x:auto;font-family:monospace;font-size:13px;line-height:1.5"><code class="${lang}">${escaped}</code></pre>`);
     return placeholder;
   });
-
-  // Step 2: Escape HTML
   html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-  // Step 3: Inline code
-  html = html.replace(/`([^`]+)`/g,
-    '<code style="font-family:monospace;background:rgba(0,0,0,0.07);padding:2px 5px;border-radius:4px">$1</code>');
-
-  // Step 4: Bold
+  html = html.replace(/`([^`]+)`/g, '<code style="font-family:monospace;background:rgba(0,0,0,0.07);padding:2px 5px;border-radius:4px">$1</code>');
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-  // Step 5: Italic
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-  // Step 6: Tables
   html = html.replace(/((?:\|.+\|\n?)+)/g, (block) => {
     const rows  = block.trim().split('\n').filter(r => r.trim());
     const isSep = r => /^\|[\s\-:|]+\|/.test(r);
@@ -230,60 +266,32 @@ function renderMarkdown(raw) {
     for (const row of rows) {
       if (isSep(row)) { inHead = false; continue; }
       const tag   = inHead ? 'th' : 'td';
-      const style = inHead
-        ? 'border:1px solid #ddd;padding:8px 12px;background:#f5f5f5;font-weight:600;text-align:left'
-        : 'border:1px solid #ddd;padding:8px 12px;text-align:left';
+      const style = inHead ? 'border:1px solid #ddd;padding:8px 12px;background:#f5f5f5;font-weight:600;text-align:left' : 'border:1px solid #ddd;padding:8px 12px;text-align:left';
       const cells = row.split('|').filter(c => c.trim() !== '');
       table += `<tr>${cells.map(c => `<${tag} style="${style}">${c.trim()}</${tag}>`).join('')}</tr>`;
     }
     return table + '</table>';
   });
-
-  // Step 7: Headings
   html = html.replace(/^### (.+)$/gm, '<h3 style="font-size:16px;font-weight:600;margin:16px 0 8px">$1</h3>');
   html = html.replace(/^## (.+)$/gm,  '<h2 style="font-size:20px;font-weight:700;margin:20px 0 10px">$1</h2>');
   html = html.replace(/^# (.+)$/gm,   '<h1 style="font-size:24px;font-weight:700;margin:24px 0 12px">$1</h1>');
-
-  // Step 8: Unordered lists
   html = html.replace(/^\- (.+)$/gm, '<li style="margin:4px 0">$1</li>');
-  html = html.replace(/(<li[^>]*>.*<\/li>\n?)+/g,
-    m => `<ul style="margin:8px 0;padding-left:24px">${m}</ul>`);
-
-  // Step 9: Ordered lists
+  html = html.replace(/(<li[^>]*>.*<\/li>\n?)+/g, m => `<ul style="margin:8px 0;padding-left:24px">${m}</ul>`);
   html = html.replace(/^\d+\. (.+)$/gm, '<li style="margin:4px 0">$1</li>');
-  html = html.replace(/(<li[^>]*>.*<\/li>\n?)+/g, m => {
-    if (m.includes('<ul')) return m;
-    return `<ol style="margin:8px 0;padding-left:24px">${m}</ol>`;
-  });
-
-  // Step 10: Paragraphs
+  html = html.replace(/(<li[^>]*>.*<\/li>\n?)+/g, m => m.includes('<ul') ? m : `<ol style="margin:8px 0;padding-left:24px">${m}</ol>`);
   html = html.replace(/\n{2,}/g, '</p><p style="margin:8px 0">');
   html = `<p style="margin:8px 0">${html}</p>`;
   html = html.replace(/\n/g, '<br>');
-
-  // Step 11: Restore code blocks
   codeBlocks.forEach((block, i) => { html = html.replace(`__CODEBLOCK_${i}__`, block); });
   return html;
 }
 
-/* ── Modal ── */
 function renderModalOutput(task) {
   const markdownHtml = renderMarkdown(task.content);
-  if (
-    task.deliverable_type === 'code' &&
-    task.content &&
-    (task.content.includes('<!DOCTYPE html>') || task.content.includes('<html>'))
-  ) {
+  if (task.deliverable_type === 'code' && task.content && (task.content.includes('<!DOCTYPE html>') || task.content.includes('<html>'))) {
     const blob = new Blob([task.content], { type: 'text/html' });
     const url  = URL.createObjectURL(blob);
-    return `
-      <div class="modal-markdown">${markdownHtml}</div>
-      <div class="modal-preview">
-        <h4>Live Preview</h4>
-        <iframe src="${url}" sandbox="allow-same-origin allow-scripts"
-          style="width:100%;height:400px;border:1px solid #ddd;
-                 border-radius:8px;margin-top:8px;"></iframe>
-      </div>`;
+    return `<div class="modal-markdown">${markdownHtml}</div><div class="modal-preview"><h4>Live Preview</h4><iframe src="${url}" sandbox="allow-same-origin allow-scripts" style="width:100%;height:400px;border:1px solid #ddd;border-radius:8px;margin-top:8px;"></iframe></div>`;
   }
   return `<div class="modal-markdown">${markdownHtml}</div>`;
 }
@@ -292,63 +300,32 @@ function openModal(taskId) {
   const task = S.tasks.find(t => t.id === taskId);
   if (!task) return;
   S.selTask = taskId;
-
   document.getElementById('modal-title').textContent       = task.title_output || task.title;
   document.getElementById('modal-instruction').textContent = task.instruction || '';
-  document.getElementById('modal-content').innerHTML       = task.content
-    ? renderModalOutput(task)
-    : '<p style="color:var(--muted)">No output yet.</p>';
-
+  document.getElementById('modal-content').innerHTML       = task.content ? renderModalOutput(task) : '<p style="color:var(--muted)">No output yet.</p>';
   document.getElementById('outputModal').classList.remove('hidden');
 }
 
 function closeModal() {
   document.querySelectorAll('.modal-preview iframe').forEach(iframe => {
-    if (iframe.src && iframe.src.startsWith('blob:')) {
-      URL.revokeObjectURL(iframe.src);
-    }
+    if (iframe.src && iframe.src.startsWith('blob:')) URL.revokeObjectURL(iframe.src);
   });
   document.getElementById('outputModal').classList.add('hidden');
   S.selTask = null;
 }
 
-function handleModalClick(e) {
-  if (e.target.id === 'outputModal') closeModal();
-}
+function handleModalClick(e) { if (e.target.id === 'outputModal') closeModal(); }
+function copyModalContent() { const task = S.tasks.find(t => t.id === S.selTask); if (!task || !task.content) return; navigator.clipboard.writeText(task.content).then(() => showNotification('Copied to clipboard')); }
+function downloadModalContent() { const task = S.tasks.find(t => t.id === S.selTask); if (!task || !task.content) return; const blob = new Blob([task.content], { type: 'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${(task.title_output || task.title).replace(/\s+/g, '_')}.md`; a.click(); URL.revokeObjectURL(url); }
+function copyTaskContent(taskId) { const task = S.tasks.find(t => t.id === taskId); if (!task || !task.content) return; navigator.clipboard.writeText(task.content).then(() => showNotification('Copied')); }
 
-function copyModalContent() {
-  const task = S.tasks.find(t => t.id === S.selTask);
-  if (!task || !task.content) return;
-  navigator.clipboard.writeText(task.content).then(() => showNotification('Copied to clipboard'));
-}
-
-function downloadModalContent() {
-  const task = S.tasks.find(t => t.id === S.selTask);
-  if (!task || !task.content) return;
-  const blob = new Blob([task.content], { type: 'text/markdown' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `${(task.title_output || task.title).replace(/\s+/g, '_')}.md`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function copyTaskContent(taskId) {
-  const task = S.tasks.find(t => t.id === taskId);
-  if (!task || !task.content) return;
-  navigator.clipboard.writeText(task.content).then(() => showNotification('Copied'));
-}
+/* ── Final Sync to Disk with Extension Fix ── */
 
 async function syncToDisk() {
   const doneTasks = S.tasks.filter(t => t.status === 'done' && t.content);
-  if (!doneTasks.length) {
-    showNotification('No completed tasks to sync.');
-    return;
-  }
+  if (!doneTasks.length) { showNotification('No completed tasks to sync.'); return; }
 
   const files = [];
-  // Accept: ### File: path, ### File: "path", ### File: 'path', plus trailing spaces
   const fileHeaderRe = /###\s*File:\s*(?:"([^"]+)"|'([^']+)'|([^\s\n]+))/g;
 
   for (const task of doneTasks) {
@@ -367,11 +344,21 @@ async function syncToDisk() {
         const end = i + 1 < headers.length ? headers[i + 1].start : content.length;
         const section = content.slice(start, end).trim();
 
-        const codeMatch = section.match(/```(?:\w*)\n([\s\S]*?)```/);
-        const code = codeMatch ? codeMatch[1] : section;
+        const codeMatch = section.match(/```(\w*)\n([\s\S]*?)```/);
+        const lang = codeMatch ? codeMatch[1] : 'txt';
+        const code = codeMatch ? codeMatch[2] : section;
 
         if (code.trim()) {
-          files.push({ filename: headers[i].filename, content: code.trim() });
+          let filename = headers[i].filename;
+          
+          // Phase 6 EXTENSION FIX:
+          if (!filename.includes('.')) {
+            const extMap = { 'js':'js', 'javascript':'js', 'py':'py', 'python':'py', 'html':'html', 'css':'css', 'json':'json', 'sh':'sh', 'bash':'sh', 'md':'md' };
+            const ext = extMap[lang.toLowerCase()] || 'txt';
+            filename = `${filename}.${ext}`;
+          }
+          
+          files.push({ filename, content: code.trim() });
         }
       }
     } else {
@@ -380,10 +367,7 @@ async function syncToDisk() {
     }
   }
 
-  if (!files.length) {
-    showNotification('No code blocks found to sync.');
-    return;
-  }
+  if (!files.length) { showNotification('No code blocks found to sync.'); return; }
 
   try {
     const res = await fetch('/api/sync', {
@@ -392,35 +376,13 @@ async function syncToDisk() {
       body: JSON.stringify({ files })
     });
     const data = await res.json();
-    if (data.success) {
-      showNotification(`Sync complete: ${data.filesWritten?.length || 0} file(s)`);
-    } else {
-      showNotification(`Sync failed: ${data.error || 'Unknown error'}`);
-    }
-  } catch (err) {
-    showNotification(`Sync failed: ${err.message}`);
-  }
+    if (data.success) { showNotification(`Sync complete: ${data.filesWritten?.length || 0} file(s)`); }
+  } catch (err) { showNotification(`Sync failed: ${err.message}`); }
 }
 
-function downloadZip() {
-  const payload = {
-    tasks: S.tasks,
-    time_saved: S.timeSaved,
-    cfg: S.cfg,
-    keys: S.keys
-  };
+function downloadZip() { const payload = { tasks: S.tasks, time_saved: S.timeSaved, cfg: S.cfg, keys: S.keys }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'agentos_export.json'; a.click(); URL.revokeObjectURL(url); showNotification('Download ready (JSON).'); }
 
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'agentos_export.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  showNotification('Download ready (JSON).');
-}
-
-/* ── Settings modal ── */
+/* ── Settings ── */
 function openSettings() {
   const el = id => document.getElementById(id);
   el('key-deepseek').value   = S.keys.deepseek   || '';
@@ -429,12 +391,16 @@ function openSettings() {
   el('key-groq').value       = S.keys.groq        || '';
   el('key-cloudflare').value = S.keys.cloudflare  || '';
   el('key-cfAcct').value     = S.keys.cfAcct      || '';
+  
+  // Set the current workspace path in settings
+  fetch('/api/load').then(r => r.json()).then(data => {
+      // In local mode, the workspace path is managed by server.js globally
+  });
+
   document.getElementById('settingsModal').classList.remove('hidden');
 }
 
-function closeSettings() {
-  document.getElementById('settingsModal').classList.add('hidden');
-}
+function closeSettings() { document.getElementById('settingsModal').classList.add('hidden'); }
 
 function saveSettings() {
   const el = id => document.getElementById(id).value.trim();
@@ -451,16 +417,7 @@ function saveSettings() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: workspacePath })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (!data.success) {
-        showNotification(`Workspace path save failed: ${data.error || 'Unknown'}`);
-      }
-    })
-    .catch(err => {
-      showNotification(`Workspace path save failed: ${err.message}`);
-    });
+    }).catch(err => console.error('Path update failed:', err));
   }
 
   saveToStorage();
@@ -468,62 +425,30 @@ function saveSettings() {
   showNotification('Settings saved');
 }
 
-function handleSettingsClick(e) {
-  if (e.target.id === 'settingsModal') closeSettings();
-}
+function handleSettingsClick(e) { if (e.target.id === 'settingsModal') closeSettings(); }
 
-/* ── Navigation ── */
-function setView(v) {
-  S.view = v;
-  render();
-}
+function setView(v) { S.view = v; render(); }
+function setFilter(f) { S.filter = f; document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f)); renderTaskBoard(); }
+function setPanelTab(t) { S.tab = t; renderRightPanel(); }
+function onSearch(q) { S.searchQ = q; renderTaskBoard(); }
 
-function setFilter(f) {
-  S.filter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.filter === f);
-  });
-  renderTaskBoard();
-}
-
-function setPanelTab(t) {
-  S.tab = t;
-  renderRightPanel();
-}
-
-function onSearch(q) {
-  S.searchQ = q;
-  renderTaskBoard();
-}
-
-/* ── Start ── */
 function handleStart() {
   const goal = document.getElementById('goal-input').value.trim();
   if (!goal) { showNotification('Enter a goal first.'); return; }
   if (S.running) { showNotification('Already running.'); return; }
+  // runCEO is in engine.js
   runCEO(goal);
 }
 
-/* ── Test agent ── */
 async function testAgent(agentId) {
   const hint = document.getElementById(`hint-${agentId}`);
   if (hint) hint.textContent = 'Testing…';
   const provider = S.cfg[agentId].provider;
-  const key      = S.keys[provider];
-  if (!key) {
-    if (hint) hint.textContent = `No ${provider} key in Settings.`;
-    return;
-  }
+  if (!S.keys[provider]) { hint.textContent = `No ${provider} key.`; return; }
+  // callFO is in core.js
   const result = await callFO(agentId, 'say hello', null, 50);
   if (hint) hint.textContent = result ? '✓ OK' : '✗ Failed';
 }
 
-/* ── Utility ── */
-function _esc(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function _statusLabel(s) {
-  return { todo:'Todo', waiting:'Waiting', in_progress:'In Progress', done:'Done', blocked:'Blocked' }[s] || s;
-}
+function _esc(str) { if (!str) return ''; return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function _statusLabel(s) { return { todo:'Todo', waiting:'Waiting', in_progress:'In Progress', done:'Done', blocked:'Blocked' }[s] || s; }

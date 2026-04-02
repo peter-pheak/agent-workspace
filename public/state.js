@@ -32,6 +32,8 @@ const PROVIDERS = ['deepseek', 'gemini', 'openrouter', 'groq', 'cloudflare'];
 const FALLBACK_CHAIN = ['deepseek', 'gemini', 'groq', 'openrouter', 'cloudflare'];
 
 const S = {
+  currentWorkspaceId: 1,  // NEW: Tracks the active project
+  workspaces: [],         // NEW: Holds the list of available projects
   tasks:      [],
   logs:       [],
   running:    false,
@@ -75,10 +77,18 @@ function setLive(agentId, delta) {
 
 function persistTask(task) {
   if (!task?.id) return;
+  
+  // Inject the workspace_id into the payload before saving to DB
+  const payload = {
+    ...task,
+    workspace_id: S.currentWorkspaceId,
+    depends_on: Array.isArray(task.depends_on) ? task.depends_on : []
+  };
+
   fetch('/api/save-task', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(task)
+    body: JSON.stringify(payload)
   }).catch(() => { /* best-effort */ });
 }
 
@@ -87,10 +97,7 @@ function updateTask(id, patch) {
   if (t) {
     Object.assign(t, patch);
     saveToStorage();
-    persistTask({
-      ...t,
-      depends_on: Array.isArray(t.depends_on) ? t.depends_on : [],
-    });
+    persistTask(t); // persistTask now handles the workspace_id injection
   }
 }
 
@@ -118,6 +125,7 @@ function mkTask(overrides) {
   const id = `LOC-${String(S.tc++).padStart(2, '0')}`;
   return Object.assign({
     id,
+    workspace_id:     S.currentWorkspaceId, // Attach current project ID
     title:            'Untitled',
     instruction:      '',
     assignee:         'Writer',
