@@ -1,10 +1,10 @@
 const TIME_CREDIT = 5;
 
 const DEF_CFG = {
-  CEO:        { provider: 'deepseek', model: 'deepseek-chat'     },
+  CEO:        { provider: 'deepseek', model: 'deepseek-reasoner'     },
   Writer:     { provider: 'deepseek', model: 'deepseek-chat'     },
   Coder:      { provider: 'deepseek', model: 'deepseek-chat'     },
-  Researcher: { provider: 'gemini',   model: 'gemini-2.0-flash'  },
+  Researcher: { provider: 'gemini',   model: 'gemini-2.5-flash'  },
   Reviewer:   { provider: 'deepseek', model: 'deepseek-chat'     }
 };
 
