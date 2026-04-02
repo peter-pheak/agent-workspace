@@ -472,10 +472,9 @@ details[open] summary{color:var(--accent)}
 const SUPABASE_URL  = 'https://gqxexmjgzleyjtqduqyk.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeGV4bWpnemxleWp0cWR1cXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNjM5MzUsImV4cCI6MjA5MDYzOTkzNX0.T5izarEaszny-J2TiLN2QJ_8Aual5Q_dYaJqcdEQjQY';
 // supabase is declared by the CDN script as a global (window.supabase = library).
-// initSupabase() overwrites it with the client instance via:
-//   supabase = window.supabase.createClient(...)
-// Do NOT redeclare it with let/const here — that causes a SyntaxError.
-let sb = null;
+// initSupabase() sets window.sb to avoid collision with the global `supabase` name.
+// Do NOT redeclare `supabase` as a local variable.
+window.sb = null;
 let currentUserId = null;
 
 const PROVS = {
@@ -653,8 +652,8 @@ function loadKeysFromStorage() {
 }
 
 async function saveTimeSaved() {
-  if (!supabase || !currentUserId) return;
-  await supabase.from('user_profiles')
+  if (!window.sb || !currentUserId) return;
+  await window.sb.from('user_profiles')
     .update({ time_saved: S.timeSaved })
     .eq('user_id', currentUserId)
     .catch(e => console.error('saveTimeSaved error:', e.message));
@@ -701,8 +700,8 @@ async function dbUpsertTask(task) {
 }
 
 async function saveAgentConfig() {
-  if (!supabase || !currentUserId) return;
-  const { error } = await supabase.from('user_profiles').upsert({
+  if (!window.sb || !currentUserId) return;
+  const { error } = await window.sb.from('user_profiles').upsert({
     user_id: currentUserId, agent_configs: S.cfg
   }, { onConflict: 'user_id' });
   if (error) console.error('saveAgentConfig error:', error.message);
@@ -1717,12 +1716,12 @@ async function handleClear() {
   Object.keys(S.stats).forEach(k => S.stats[k] = 0);
   saveToStorage();
   // Delete all tasks from DB so they don't reappear on refresh
-  if (supabase && currentUserId) {
-    supabase.from('tasks').delete()
+  if (window.sb && currentUserId) {
+    window.sb.from('tasks').delete()
       .eq('user_id', currentUserId)
       .then(({ error }) => { if (error) console.error('Clear DB error:', error.message); });
     // Also reset time_saved in user_profiles
-    supabase.from('user_profiles')
+    window.sb.from('user_profiles')
       .update({ time_saved: 0 })
       .eq('user_id', currentUserId)
       .catch(e => console.error('Clear timeSaved error:', e.message));
@@ -1751,13 +1750,15 @@ async function handleAuthSubmit() {
   const email    = $('authEmail').value.trim();
   const password = $('authPassword').value.trim();
   if (!email || !password) { showAuthError('Email and password are required.'); return; }
+  if (!window.sb) { showAuthError('Supabase client not initialized. Please refresh the page.'); return; }
+
   const btn     = $('authSubmitBtn');
   const spinner = $('authSpinner');
   btn.disabled = true; spinner.style.display = 'block';
   $('authSubtitle').style.display = 'none';
   const fn = authMode === 'signin'
-    ? supabase.auth.signInWithPassword({ email, password })
-    : supabase.auth.signUp({ email, password });
+    ? window.sb.auth.signInWithPassword({ email, password })
+    : window.sb.auth.signUp({ email, password });
   const { data, error } = await fn;
   btn.disabled = false; spinner.style.display = 'none';
   if (error) { showAuthError(error.message); return; }
@@ -1785,8 +1786,8 @@ async function handleStart() {
   // Delete previous run's tasks from Supabase before starting fresh.
   // This prevents display_id collisions: a new run always starts from LOC-01
   // and upsert would silently overwrite old tasks otherwise.
-  if (supabase && currentUserId) {
-    await supabase.from('tasks').delete()
+  if (window.sb && currentUserId) {
+    await window.sb.from('tasks').delete()
       .eq('user_id', currentUserId)
       .catch(e => console.error('Pre-run clear error:', e.message));
   }
@@ -1834,19 +1835,22 @@ function markRecentWrite(displayId) {
 
 async function initSupabase() {
     console.log("1. Initializing Supabase...");
+    if (!window.supabase) {
+      console.error("Supabase SDK not loaded. Ensure the CDN script is included.");
+      return;
+    }
     try {
-        // Create the client and assign it to our global 'sb' variable
-        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-        
-        console.log("Supabase Client Created:", sb);
+        // Create the client and assign it to our global 'window.sb' variable
+        window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        console.log("Supabase Client Created:", window.sb);
 
-        sb.auth.onAuthStateChange(async (event, session) => {
+        window.sb.auth.onAuthStateChange(async (event, session) => {
             console.log("2. Auth Event:", event);
             if (!session) {
                 showAuthScreen();
             } else {
                 currentUserId = session.user.id;
-                await loadFromSupabase(); 
+                await loadFromSupabase();
                 hideAuthScreen();
             }
         });
@@ -1922,8 +1926,8 @@ function hideAuthScreen() {
 }
 
 function subscribeToChanges() {
-  if (!supabase || !currentUserId) return;
-  supabase.channel(`tasks:${currentUserId}`)
+  if (!window.sb || !currentUserId) return;
+  window.sb.channel(`tasks:${currentUserId}`)
     .on('postgres_changes', {
       event:'*', schema:'public', table:'tasks',
       filter: `user_id=eq.${currentUserId}`
@@ -1941,7 +1945,7 @@ function subscribeToChanges() {
 }
 
 async function signOut() {
-  await supabase.auth.signOut();
+  await window.sb.auth.signOut();
   S.tasks=[]; S.logs=[]; S.tc=1; S.timeSaved=0; currentUserId=null;
   refreshBoard(); updStats();
   showAuthScreen();
