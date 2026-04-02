@@ -216,6 +216,28 @@ async function runCEO(goal) {
   }
 }
 
+function buildUserMessage(task) {
+  if (!task || !task.instruction) return '';
+
+  return `Task: ${task.title || 'Untitled'}\n` +
+         `Assignee: ${task.assignee || 'Writer'}\n` +
+         `Deliverable Type: ${task.deliverable_type || 'document'}\n\n` +
+         `${task.instruction.trim()}`;
+}
+
+function buildCEOMessage(goal, taskType = 'auto') {
+  if (!goal) return '';
+
+  return `You are the CEO agent in AgentOS. Create a structured execution plan for this goal.\n\n` +
+         `Goal: ${goal.trim()}\n` +
+         `Task type: ${taskType}\n\n` +
+         `Output format: JSON with keys { message, tasks }.\n` +
+         `tasks must be an array of objects with: title, instruction, assignee, deliverable_type, depends_on.\n` +
+         `Use assignees from [Writer, Coder, Researcher, Reviewer].\n` +
+         `Use depends_on by task title or id references.\n` +
+         `No plain text list; return valid JSON only.`;
+}
+
 function retryTask(taskId) {
   function resetDownstream(id) {
     const t = S.tasks.find(x => x.id === id);
