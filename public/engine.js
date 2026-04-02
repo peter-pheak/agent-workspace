@@ -197,6 +197,26 @@ async function runCEO(goal) {
   // --- STEP 2: Fetch workspace tree for "God View" ---
   let projectTreeStr = '';
   try {
+    let contextString = "";
+    const checkedFiles = Array.from(document.querySelectorAll('.context-cb:checked')).map(cb => cb.value);
+    
+    if (checkedFiles.length > 0) {
+        addLog('CEO', 'info', `Reading ${checkedFiles.length} file(s) for context...`);
+        contextString = "\n\n### EXISTING PROJECT CONTEXT\n";
+        for (const file of checkedFiles) {
+            const res = await fetch(`/api/read-source?name=${file}`);
+            const data = await res.json();
+            contextString += `\n### File: ${file}\n\`\`\`\n${data.content}\n\`\`\`\n`;
+        }
+        contextString += "### END CONTEXT\n";
+    }
+    // -------------------------
+
+    // Now build the message and ADD the contextString to the system prompt
+    const userMessage = buildCEOMessage(goal, S.taskType);
+    const systemPrompt = PROMPTS.CEO.system + contextString;
+
+    const raw = await callFO(agentId, systemPrompt, userMessage, null, AGENT_MAX_TOKENS.CEO);
     const treeRes = await fetch('/api/tree');
     if (treeRes.ok) {
       const treeData = await treeRes.json();
