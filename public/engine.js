@@ -125,6 +125,12 @@ async function runExecutor(task) {
           showFailModal(task, `${agentId} returned no content.`);
         });
 
+        if (action === 'skip') {
+          updateTask(task.id, { status: 'blocked', error: `${agentId} skipped after no content` });
+          addLog(`${task.title} skipped — no content`, 'warn');
+          return;
+        }
+
         if (action === 'retry') {
           const fallbackProvider = _nextFallback(S.cfg[agentId].provider);
           if (fallbackProvider) {

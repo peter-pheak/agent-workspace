@@ -615,7 +615,9 @@ const AGENT_PROMPTS = {
 // Backward compatibility: core.js expects PROMPTS[agentId]
 const PROMPTS = {
   CEO:        CEO_PROMPT,
+  Writer:     CODER_PROMPT,
   Coder:      CODER_PROMPT,
+  Reviewer:   CODER_PROMPT,
   Copilot:    COPILOT_PROMPT,
   Researcher: RESEARCHER_PROMPT,
   Tester:     TESTER_PROMPT,
