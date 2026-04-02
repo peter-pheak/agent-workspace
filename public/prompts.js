@@ -9,7 +9,7 @@
 // Usage: getContextBlock(repoFiles) where repoFiles is the
 //        array returned by GET /api/workspace-context
 // ─────────────────────────────────────────────────────────────
-export function getContextBlock(repoFiles = []) {
+function getContextBlock(repoFiles = []) {
   if (!repoFiles || repoFiles.length === 0) return '';
 
   const tree = repoFiles.map(f => `  ${f.path}`).join('\n');
@@ -36,7 +36,7 @@ ${snippets}
 // ─────────────────────────────────────────────────────────────
 // CEO — Context-Aware Orchestrator
 // ─────────────────────────────────────────────────────────────
-export const CEO_PROMPT = `
+const CEO_PROMPT = `
 AGENT ROLE: CEO (Orchestrator)
 ENVIRONMENT: AgentOS v4.5 — DAG Execution Engine
 ═══════════════════════════════════════════════════════════════
@@ -198,7 +198,7 @@ ANTI-PATTERNS (NEVER DO THESE)
 // ─────────────────────────────────────────────────────────────
 // CODER — Context-Aware Senior Technical Architect
 // ─────────────────────────────────────────────────────────────
-export const CODER_PROMPT = `
+const CODER_PROMPT = `
 AGENT ROLE: Coder (Senior Technical Architect)
 ENVIRONMENT: AgentOS v4.5 — DAG Execution Engine / VS Code Workspace
 ═══════════════════════════════════════════════════════════════
@@ -444,7 +444,7 @@ If any check fails — fix it. Do not output until all pass.
 // ─────────────────────────────────────────────────────────────
 // COPILOT — VS Code Precision Code Assistant
 // ─────────────────────────────────────────────────────────────
-export const COPILOT_PROMPT = `
+const COPILOT_PROMPT = `
 AGENT ROLE: Copilot
 ENVIRONMENT: Visual Studio Code (Local Workspace)
 VERSION: AgentOS v4.5
@@ -536,7 +536,7 @@ SELF-VERIFICATION CHECKLIST
 // ─────────────────────────────────────────────────────────────
 // RESEARCHER — Domain & Library Intelligence Agent
 // ─────────────────────────────────────────────────────────────
-export const RESEARCHER_PROMPT = `
+const RESEARCHER_PROMPT = `
 AGENT ROLE: Researcher
 ENVIRONMENT: AgentOS v4.5
 
@@ -567,7 +567,7 @@ CONSTRAINTS:
 // ─────────────────────────────────────────────────────────────
 // TESTER — QA and Validation Agent
 // ─────────────────────────────────────────────────────────────
-export const TESTER_PROMPT = `
+const TESTER_PROMPT = `
 AGENT ROLE: Tester
 ENVIRONMENT: AgentOS v4.5
 
@@ -604,7 +604,7 @@ COVERAGE REQUIREMENTS:
 // PROMPT REGISTRY
 // Use this map in engine.js to resolve agent → prompt
 // ─────────────────────────────────────────────────────────────
-export const AGENT_PROMPTS = {
+const AGENT_PROMPTS = {
   ceo:        CEO_PROMPT,
   coder:      CODER_PROMPT,
   copilot:    COPILOT_PROMPT,
@@ -612,12 +612,21 @@ export const AGENT_PROMPTS = {
   tester:     TESTER_PROMPT,
 };
 
+// Backward compatibility: core.js expects PROMPTS[agentId]
+const PROMPTS = {
+  CEO:        CEO_PROMPT,
+  Coder:      CODER_PROMPT,
+  Copilot:    COPILOT_PROMPT,
+  Researcher: RESEARCHER_PROMPT,
+  Tester:     TESTER_PROMPT,
+};
+
 // ─────────────────────────────────────────────────────────────
 // HELPER: Assemble a full prompt for the engine
 // engine.js usage:
 //   const prompt = buildAgentPrompt('coder', taskDescription, repoFiles);
 // ─────────────────────────────────────────────────────────────
-export function buildAgentPrompt(agentRole, taskDescription, repoFiles = []) {
+function buildAgentPrompt(agentRole, taskDescription, repoFiles = []) {
   const basePrompt = AGENT_PROMPTS[agentRole.toLowerCase()];
   if (!basePrompt) {
     throw new Error(`[AgentOS][buildAgentPrompt] Unknown agent role: ${agentRole}`);
