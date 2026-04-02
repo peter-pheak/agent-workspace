@@ -310,8 +310,45 @@ function copyTaskContent(taskId) {
 }
 
 async function syncToDisk() {
-  if (!S.tasks.length) {
-    showNotification('No tasks to sync.');
+  const doneTasks = S.tasks.filter(t => t.status === 'done' && t.content);
+  if (!doneTasks.length) {
+    showNotification('No completed tasks to sync.');
+    return;
+  }
+
+  const files = [];
+  const fileHeaderRe = /### File:\s*([^\s\n]+)/g;
+
+  for (const task of doneTasks) {
+    const content = task.content || '';
+    let match;
+    const headers = [];
+
+    while ((match = fileHeaderRe.exec(content)) !== null) {
+      headers.push({ filename: match[1], start: match.index, end: match.index + match[0].length });
+    }
+
+    if (headers.length > 0) {
+      for (let i = 0; i < headers.length; i++) {
+        const start = headers[i].end;
+        const end = i + 1 < headers.length ? headers[i + 1].start : content.length;
+        const section = content.slice(start, end).trim();
+
+        const codeMatch = section.match(/```(?:\w*)\n([\s\S]*?)```/);
+        const code = codeMatch ? codeMatch[1] : section;
+
+        if (code.trim()) {
+          files.push({ filename: headers[i].filename, content: code.trim() });
+        }
+      }
+    } else {
+      const fallbackName = `${task.id}-${task.title || 'task'}`.replace(/[^a-zA-Z0-9._-]/g, '_');
+      files.push({ filename: `${fallbackName}.txt`, content });
+    }
+  }
+
+  if (!files.length) {
+    showNotification('No code blocks found to sync.');
     return;
   }
 
@@ -319,7 +356,7 @@ async function syncToDisk() {
     const res = await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tasks: S.tasks })
+      body: JSON.stringify({ files })
     });
     const data = await res.json();
     if (data.success) {
@@ -374,6 +411,25 @@ function saveSettings() {
   S.keys.groq       = el('key-groq');
   S.keys.cloudflare = el('key-cloudflare');
   S.keys.cfAcct     = el('key-cfAcct');
+
+  const workspacePath = el('sync-path-input');
+  if (workspacePath) {
+    fetch('/api/set-workspace', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: workspacePath })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) {
+        showNotification(`Workspace path save failed: ${data.error || 'Unknown'}`);
+      }
+    })
+    .catch(err => {
+      showNotification(`Workspace path save failed: ${err.message}`);
+    });
+  }
+
   saveToStorage();
   closeSettings();
   showNotification('Settings saved');

@@ -1,0 +1,17 @@
+{
+  "name": "agent-workspace",
+  "version": "1.0.0",
+  "description": "A multi-agent AI workspace powered by your free-tier API providers. CEO → CMO / CTO → Engineering Manager, all running on real AI APIs.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "express": "^5.2.1"
+  }
+}

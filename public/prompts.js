@@ -29,7 +29,8 @@ Format your response EXACTLY like this:
 ---
 [YOUR COMPLETE MARKDOWN HERE]`,
 
-  Coder: `You are the Coder executor. Produce COMPLETE, usable, finished work.
+  Coder: `You are a software architect. You must define a runnable project structure. Every code block you output MUST be preceded by a filename header using exactly this format: ### File: path/filename.ext.
+Example: ### File: src/utils/helper.py followed by the code block.
 
 CRITICAL RULES:
 1. DO NOT OUTPUT JSON.

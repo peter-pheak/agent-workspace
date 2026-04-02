@@ -18,6 +18,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 const dbPath = path.join(__dirname, 'agentos.db');
 const db = new Database(dbPath);
 
+let currentWorkspacePath = path.join(__dirname, 'workspace');
+
 // Schema
 db.exec(`
 CREATE TABLE IF NOT EXISTS tasks (
@@ -255,6 +257,22 @@ app.post('/api/agent', async (req, res) => {
   }
 });
 
+app.post('/api/set-workspace', (req, res) => {
+  try {
+    const requestedPath = req.body?.path;
+    if (!requestedPath || typeof requestedPath !== 'string') {
+      return res.status(400).json({ success: false, error: 'Missing path string' });
+    }
+    currentWorkspacePath = path.resolve(requestedPath);
+    if (!fs.existsSync(currentWorkspacePath)) {
+      fs.mkdirSync(currentWorkspacePath, { recursive: true });
+    }
+    return res.json({ success: true, path: currentWorkspacePath });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/api/load', (req, res) => {
   try {
     const tasks = db.prepare('SELECT * FROM tasks').all().map(toTask);
@@ -363,18 +381,28 @@ app.post('/api/sync', (req, res) => {
       files = files.concat(extractFilesFromTasks(tasks));
     }
 
-    const workspaceFolder = path.join(__dirname, 'workspace');
-    if (!fs.existsSync(workspaceFolder)) fs.mkdirSync(workspaceFolder, { recursive: true });
+    if (!fs.existsSync(currentWorkspacePath)) {
+      fs.mkdirSync(currentWorkspacePath, { recursive: true });
+    }
 
     const written = [];
     for (const file of files) {
-      const safeName = sanitizeFilename(file.filename || `task-${Date.now()}.txt`);
-      const targetPath = path.join(workspaceFolder, safeName);
+      const rawFilename = file.filename || `task-${Date.now()}.txt`;
+      const normalized = rawFilename.replace(/\\/g, '/');
+      const dirPart = path.dirname(normalized);
+      const targetDir = path.join(currentWorkspacePath, dirPart === '.' ? '' : dirPart);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      const safeName = path.basename(normalized);
+      const targetPath = path.join(targetDir, safeName);
       fs.writeFileSync(targetPath, file.content || '', 'utf8');
-      written.push({ filename: safeName, path: targetPath });
+      console.log(`Sync wrote file: ${targetPath}`);
+      written.push({ filename: rawFilename, path: targetPath });
     }
 
-    return res.json({ success: true, filesWritten: written });
+    return res.json({ success: true, filesWritten: written, workspace: currentWorkspacePath });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }
