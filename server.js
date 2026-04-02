@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   deliverable_type TEXT,
   content TEXT,
   title_output TEXT,
-  error TEXT
+  error TEXT,
+  is_truncated INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS profile (
   id INTEGER PRIMARY KEY,
@@ -40,6 +41,11 @@ CREATE TABLE IF NOT EXISTS profile (
   agent_configs TEXT
 );
 `);
+
+const taskCols = db.prepare('PRAGMA table_info(tasks)').all();
+if (!taskCols.find(c => c.name === 'is_truncated')) {
+  db.exec('ALTER TABLE tasks ADD COLUMN is_truncated INTEGER DEFAULT 0;');
+}
 
 function normalizeDeps(raw) {
   if (!raw) return [];
@@ -58,7 +64,8 @@ function toTask(row) {
     deliverable_type: row.deliverable_type,
     content: row.content,
     title_output: row.title_output,
-    error: row.error
+    error: row.error,
+    is_truncated: row.is_truncated === 1
   };
 }
 
@@ -70,6 +77,24 @@ function extractErrorBody(data) {
   if (!data || typeof data !== 'object') return JSON.stringify(data).slice(0, 300);
   const msg = data?.error?.message || data?.message || data?.detail || (Array.isArray(data?.errors) && data.errors[0]?.message);
   return msg || JSON.stringify(data).slice(0, 300);
+}
+
+async function proxyCallWithRetry(providerName, fn, ...args) {
+  const maxAttempt = 4;
+  for (let attempt = 1; attempt <= maxAttempt; attempt++) {
+    try {
+      return await fn(...args);
+    } catch (err) {
+      const text = (err.message || '').toLowerCase();
+      const isRateLimit = text.includes('429') || text.includes('rate limit') || text.includes('rate-limited');
+      if (!isRateLimit || attempt === maxAttempt) {
+        throw err;
+      }
+      const wait = Math.min(60, Math.pow(2, attempt) * 2 + Math.random() * 2);
+      console.log(`proxyCallWithRetry ${providerName} attempt ${attempt}/${maxAttempt}, waiting ${wait.toFixed(1)}s due to 429`);
+      await new Promise(resolve => setTimeout(resolve, wait * 1000));
+    }
+  }
 }
 
 function timedFetch(url, opts = {}, ms = 25000) {
@@ -230,23 +255,23 @@ app.post('/api/agent', async (req, res) => {
     switch (provider.toLowerCase()) {
       case 'deepseek':
         if (!apiKeys.deepseek) throw new Error('DeepSeek API key missing');
-        content = await callDeepSeek(model, systemPrompt, userMessage, apiKeys.deepseek);
+        content = await proxyCallWithRetry('DeepSeek', callDeepSeek, model, systemPrompt, userMessage, apiKeys.deepseek);
         break;
       case 'gemini':
         if (!apiKeys.gemini) throw new Error('Gemini API key missing');
-        content = await callGemini(model, systemPrompt, userMessage, apiKeys.gemini);
+        content = await proxyCallWithRetry('Gemini', callGemini, model, systemPrompt, userMessage, apiKeys.gemini);
         break;
       case 'groq':
         if (!apiKeys.groq) throw new Error('Groq API key missing');
-        content = await callGroq(model, systemPrompt, userMessage, apiKeys.groq);
+        content = await proxyCallWithRetry('Groq', callGroq, model, systemPrompt, userMessage, apiKeys.groq);
         break;
       case 'openrouter':
         if (!apiKeys.openrouter) throw new Error('OpenRouter API key missing');
-        content = await callOpenRouter(model, systemPrompt, userMessage, apiKeys.openrouter);
+        content = await proxyCallWithRetry('OpenRouter', callOpenRouter, model, systemPrompt, userMessage, apiKeys.openrouter);
         break;
       case 'cloudflare':
         if (!apiKeys.cloudflare) throw new Error('Cloudflare API key missing');
-        content = await callCloudflare(model, systemPrompt, userMessage, apiKeys.cloudflare, apiKeys.cloudflareAccountId || apiKeys.cfAcct);
+        content = await proxyCallWithRetry('Cloudflare', callCloudflare, model, systemPrompt, userMessage, apiKeys.cloudflare, apiKeys.cloudflareAccountId || apiKeys.cfAcct);
         break;
       default:
         throw new Error(`Unknown provider ${provider}`);
@@ -291,8 +316,17 @@ app.post('/api/save-task', (req, res) => {
   try {
     const task = req.body;
     if (!task?.id) return res.status(400).json({ success: false, error: 'Missing task.id' });
-    const stmt = db.prepare(`INSERT INTO tasks (id,title,instruction,assignee,status,depends_on,deliverable_type,content,title_output,error)
-      VALUES (@id,@title,@instruction,@assignee,@status,@depends_on,@deliverable_type,@content,@title_output,@error)
+
+    let content = task.content || '';
+    let is_truncated = 0;
+    const MAX_CONTENT = 500 * 1024;
+    if (content.length > MAX_CONTENT) {
+      content = content.slice(0, MAX_CONTENT);
+      is_truncated = 1;
+    }
+
+    const stmt = db.prepare(`INSERT INTO tasks (id,title,instruction,assignee,status,depends_on,deliverable_type,content,title_output,error,is_truncated)
+      VALUES (@id,@title,@instruction,@assignee,@status,@depends_on,@deliverable_type,@content,@title_output,@error,@is_truncated)
       ON CONFLICT(id) DO UPDATE SET
         title=excluded.title,
         instruction=excluded.instruction,
@@ -302,7 +336,8 @@ app.post('/api/save-task', (req, res) => {
         deliverable_type=excluded.deliverable_type,
         content=excluded.content,
         title_output=excluded.title_output,
-        error=excluded.error;`);
+        error=excluded.error,
+        is_truncated=excluded.is_truncated;`);
 
     const data = {
       id: task.id,
@@ -312,9 +347,10 @@ app.post('/api/save-task', (req, res) => {
       status: task.status || '',
       depends_on: JSON.stringify(task.depends_on || []),
       deliverable_type: task.deliverable_type || '',
-      content: task.content || '',
+      content,
       title_output: task.title_output || '',
-      error: task.error || ''
+      error: task.error || '',
+      is_truncated
     };
 
     stmt.run(data);

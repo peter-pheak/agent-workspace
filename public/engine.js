@@ -4,6 +4,11 @@ const MAX_CONCURRENT = 2;
 // RULE: decrement in the finally{} block of runExecutor
 // RULE: do NOT use a while-loop — evaluateTaskQueue handles dispatch
 
+async function yieldToUI() {
+  // Keep the UI thread responsive during tight queue checks
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
 async function evaluateTaskQueue() {
   // S.running guards CEO phase only — do NOT gate on it here
   let stateChanged = false;                                    // FIX 1
@@ -14,6 +19,19 @@ async function evaluateTaskQueue() {
 
   for (const task of tasksToCheck) {
     const deps = task.depends_on || [];
+    const depTasks = deps.map(id => S.tasks.find(t => t.id === id)).filter(Boolean);
+    const unknownDeps = deps.filter(id => !depTasks.some(d => d.id === id));
+
+    if (unknownDeps.length > 0) {
+      if (task.status !== 'blocked') {
+        updateTask(task.id, {
+          status: 'blocked',
+          error: `Unknown dependency IDs: ${unknownDeps.join(', ')} (task may be malformed)`
+        });
+        stateChanged = true;
+      }
+      continue;
+    }
 
     if (deps.length === 0) {
       if (task.status !== 'todo') {
@@ -28,7 +46,6 @@ async function evaluateTaskQueue() {
       continue;
     }
 
-    const depTasks   = deps.map(id => S.tasks.find(t => t.id === id)).filter(Boolean);
     const anyBlocked = depTasks.some(d => d.status === 'blocked');
     const allDone    = depTasks.every(d => d.status === 'done');
 
@@ -54,6 +71,8 @@ async function evaluateTaskQueue() {
         stateChanged = true;
       }
     }
+
+    await yieldToUI();
   }
 
   if (stateChanged) evaluateTaskQueue();                       // FIX 1 — recursive re-run

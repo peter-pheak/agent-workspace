@@ -317,7 +317,8 @@ async function syncToDisk() {
   }
 
   const files = [];
-  const fileHeaderRe = /### File:\s*([^\s\n]+)/g;
+  // Accept: ### File: path, ### File: "path", ### File: 'path', plus trailing spaces
+  const fileHeaderRe = /###\s*File:\s*(?:"([^"]+)"|'([^']+)'|([^\s\n]+))/g;
 
   for (const task of doneTasks) {
     const content = task.content || '';
@@ -325,7 +326,8 @@ async function syncToDisk() {
     const headers = [];
 
     while ((match = fileHeaderRe.exec(content)) !== null) {
-      headers.push({ filename: match[1], start: match.index, end: match.index + match[0].length });
+      const filename = match[1] || match[2] || match[3] || '';
+      headers.push({ filename: filename.trim(), start: match.index, end: match.index + match[0].length });
     }
 
     if (headers.length > 0) {

@@ -73,7 +73,7 @@ async function callFO(agentId, userMessage, task, maxTokens) {
     maxTokens
   };
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= 4; attempt++) {
     try {
       const res = await fetch('/api/agent', {
         method: 'POST',
@@ -82,8 +82,11 @@ async function callFO(agentId, userMessage, task, maxTokens) {
       });
 
       if (res.status === 429) {
-        showNotification(`Rate limited by ${provider}. Waiting 60s before retry.`, 62000);
-        await _countdown(60);
+        const backoff = Math.min(60, Math.pow(2, attempt) * 2 + Math.random() * 2);
+        const waitSecs = Math.ceil(backoff);
+        showNotification(`Rate limited by ${provider}. Retrying in ${waitSecs}s…`, waitSecs * 1000 + 500);
+        await _countdown(waitSecs);
+        await sleep(waitSecs * 1000);
         continue;
       }
 
@@ -96,11 +99,12 @@ async function callFO(agentId, userMessage, task, maxTokens) {
       return data.content;
 
     } catch (err) {
-      if (attempt === 3) {
+      if (attempt === 4) {
         showNotification(`${agentId} failed: ${err.message}`);
         return null;
       }
-      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+      const backoff = Math.min(60, Math.pow(2, attempt) + Math.random() * 2);
+      await sleep(backoff * 1000);
     }
   }
   return null;
@@ -117,6 +121,10 @@ function _countdown(seconds) {
     };
     tick();
   });
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /* Failover wrapper — shows failure modal on hard error */
