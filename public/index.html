@@ -1861,12 +1861,15 @@ async function initSupabase() {
 
 async function loadFromSupabase() {
     console.log("  -> Starting loadFromSupabase...");
-    if (!sb || !currentUserId) return;
+    if (!window.sb || !currentUserId) {
+        console.error("Missing client or user ID");
+        return;
+    }
 
     try {
-        // Fetch profile
         console.log("  -> Fetching user_profiles...");
-        const { data: profileData, error: profileError } = await sb
+        // Use a timeout so we don't hang forever
+        const { data: profileData, error: profileError } = await window.sb
             .from('user_profiles')
             .select('agent_configs, time_saved')
             .eq('user_id', currentUserId);
@@ -1874,44 +1877,37 @@ async function loadFromSupabase() {
         if (profileError) {
             console.error("  -> Profile Error:", profileError.message);
         } else if (!profileData || profileData.length === 0) {
-            console.log("  -> No profile found, creating one...");
-            await sb.from('user_profiles').insert({
-                user_id: currentUserId,
-                time_saved: 0,
-                agent_configs: {}
+            console.log("  -> No profile found, creating default...");
+            await window.sb.from('user_profiles').insert({
+                user_id: currentUserId, time_saved: 0, agent_configs: {}
             });
         } else {
-            console.log("  -> Profile loaded.");
+            console.log("  -> Profile loaded successfully.");
             const profile = profileData[0];
             if (profile.agent_configs) S.cfg = { ...S.cfg, ...profile.agent_configs };
             S.timeSaved = profile.time_saved || 0;
         }
 
-        // Fetch tasks
         console.log("  -> Fetching tasks...");
-        const { data: taskRows, error: taskErr } = await sb
+        const { data: taskRows, error: taskErr } = await window.sb
             .from('tasks')
             .select('*')
-            .eq('user_id', currentUserId)
-            .order('created_at', { ascending: true });
+            .eq('user_id', currentUserId);
 
         if (taskErr) {
             console.error("  -> Task Error:", taskErr.message);
         } else if (taskRows) {
             console.log("  -> Tasks loaded:", taskRows.length);
             S.tasks = taskRows.map(mapTask);
-            // Update task counter
-            const maxNum = taskRows.reduce((max, row) => {
-                const n = parseInt((row.display_id || '').replace(/\D/g, ''), 10);
-                return isNaN(n) ? max : Math.max(max, n);
-            }, 0);
-            S.tc = Math.max(maxNum + 1, S.tasks.length + 1);
         }
 
     } catch (err) {
-        console.error('  -> Fatal DB Error:', err);
+        console.error('  -> Fatal DB Error during load:', err);
+    } finally {
+        console.log("  -> loadFromSupabase process finished.");
+        // CRITICAL: Always hide the screen, even if the DB failed
+        hideAuthScreen(); 
     }
-    console.log("  -> loadFromSupabase finished.");
 }
 
 function hideAuthScreen() {
