@@ -1835,30 +1835,18 @@ function markRecentWrite(displayId) {
 async function initSupabase() {
     console.log("1. Initializing Supabase...");
     try {
-        if (!sb) {
-            sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-        }
+        // Create the client and assign it to our global 'sb' variable
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        
+        console.log("Supabase Client Created:", sb);
 
         sb.auth.onAuthStateChange(async (event, session) => {
-            console.log("2. Auth Event Triggered:", event);
-            
+            console.log("2. Auth Event:", event);
             if (!session) {
-                console.log("3. No session found. Showing Login.");
                 showAuthScreen();
             } else {
-                console.log("3. Session found for user:", session.user.id);
                 currentUserId = session.user.id;
-                
-                // SAFETY VALVE: If the DB takes too long, show the app anyway
-                const timeout = setTimeout(() => {
-                    console.warn("4. DB Load timed out! Showing app with empty state.");
-                    hideAuthScreen();
-                }, 5000);
-
                 await loadFromSupabase(); 
-                
-                clearTimeout(timeout);
-                console.log("4. DB Load complete. Hiding Auth Overlay.");
                 hideAuthScreen();
             }
         });
