@@ -471,7 +471,10 @@ details[open] summary{color:var(--accent)}
 // ── Supabase config ─────────────────────────────────────────
 const SUPABASE_URL  = 'https://gqxexmjgzleyjtqduqyk.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxeGV4bWpnemxleWp0cWR1cXlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNjM5MzUsImV4cCI6MjA5MDYzOTkzNX0.T5izarEaszny-J2TiLN2QJ_8Aual5Q_dYaJqcdEQjQY';
-let supabase = null;
+// supabase is declared by the CDN script as a global (window.supabase = library).
+// initSupabase() overwrites it with the client instance via:
+//   supabase = window.supabase.createClient(...)
+// Do NOT redeclare it with let/const here — that causes a SyntaxError.
 let currentUserId = null;
 
 const PROVS = {
@@ -528,7 +531,6 @@ const PT = {
   medium: { bc:'b-medium', sym:'↑'  },
   low:    { bc:'b-low',    sym:'↓'  },
 };
-
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -651,7 +653,7 @@ function loadKeysFromStorage() {
 
 async function saveTimeSaved() {
   if (!supabase || !currentUserId) return;
-  await sb.from('user_profiles')
+  await supabase.from('user_profiles')
     .update({ time_saved: S.timeSaved })
     .eq('user_id', currentUserId)
     .catch(e => console.error('saveTimeSaved error:', e.message));
@@ -675,29 +677,31 @@ function truncateForDB(content) {
 }
 
 async function dbUpsertTask(task) {
-  if (!supabase || !currentUserId) return;
-  markRecentWrite(task.id);
-  const { error } = await sb.from('tasks').upsert({
-    user_id: currentUserId, display_id: task.id,
-    title: task.title, instruction: task.instruction,
-    assignee: task.assignee, status: task.status,
-    depends_on: JSON.stringify(task.depends_on || []),
-    deliverable_type: task.deliverable_type,
-    content: truncateForDB(task.content),
-    title_output: task.title_output || null,
-    error: task.error || null
-  }, { onConflict: 'user_id,display_id' });
-  if (error) {
-    if (error.code === 'PGRST301' || (error.message && error.message.includes('JWT'))) {
-      showNotif('Session expired – please log in again.');
-      await sb.auth.refreshSession().catch(()=>{});
-    } else { console.error('dbUpsertTask error:', error.message); }
-  }
+    if (!sb || !currentUserId) return;
+    
+    // The "upsert" way — no .catch() needed
+    const { error } = await sb.from('tasks').upsert({
+        user_id: currentUserId,
+        display_id: task.id,
+        title: task.title,
+        instruction: task.instruction,
+        assignee: task.assignee,
+        status: task.status,
+        depends_on: JSON.stringify(task.depends_on || []),
+        deliverable_type: task.deliverable_type,
+        content: truncateForDB(task.content),
+        title_output: task.title_output || null,
+        error: task.error || null
+    }, { onConflict: 'user_id,display_id' });
+
+    if (error) {
+        console.error('Task Sync Failed:', error.message);
+    }
 }
 
 async function saveAgentConfig() {
   if (!supabase || !currentUserId) return;
-  const { error } = await sb.from('user_profiles').upsert({
+  const { error } = await supabase.from('user_profiles').upsert({
     user_id: currentUserId, agent_configs: S.cfg
   }, { onConflict: 'user_id' });
   if (error) console.error('saveAgentConfig error:', error.message);
@@ -1265,7 +1269,7 @@ async function handlePolish() {
   }
 }
 
-function retryTask(taskId) {
+async function retryTask(taskId) {
   function resetDownstream(id) {
     const t = S.tasks.find(x=>x.id===id);
     if (t) updateTask(t.id,{status:'todo',error:null});
@@ -1276,8 +1280,33 @@ function retryTask(taskId) {
   resetDownstream(taskId);
   refreshBoard();
   updStats();
-  // re-enter evaluation if something is running
-  if (S.running || S.polishing) evaluateTaskQueue();
+
+  // If a run is still active, let evaluateTaskQueue handle dispatch naturally.
+  // If the run has already ended (S.running=false), we need to re-enter execution
+  // so the retried task actually runs — otherwise it sits in 'todo' forever.
+  if (S.running || S.polishing) {
+    evaluateTaskQueue();
+  } else {
+    S.running = true;
+    $('goal-input').disabled = true;
+    $('run-btn').disabled    = true;
+    $('run-ind').style.display = 'flex';
+    try {
+      await evaluateTaskQueue();
+      await new Promise(res => {
+        const iv = setInterval(() => {
+          if (activeExecutors === 0) { clearInterval(iv); res(); }
+        }, 400);
+      });
+    } finally {
+      S.running = false;
+      $('goal-input').disabled = false;
+      $('run-btn').disabled    = false;
+      $('run-ind').style.display = 'none';
+      refreshBoard();
+      updStats();
+    }
+  }
 }
 
 function refreshBoard() {
@@ -1451,6 +1480,7 @@ function onProvChange(aid, prov) {
   S.cfg[aid].provider = prov;
   S.cfg[aid].model = PROVS[prov].def;
   saveToStorage();
+  saveAgentConfig();   // persist cfg change to user_profiles immediately
   renderAgents();
 }
 
@@ -1678,13 +1708,24 @@ function setTaskType(type) {
   });
 }
 
-function handleClear() {
+async function handleClear() {
   if (S.running || S.polishing) { showNotif('Cannot clear while running.'); return; }
   S.tasks = []; S.logs = []; S.tc = 1; S.selTask = null;
   S.timeSaved = 0; activeExecutors = 0;
   Object.keys(S.live).forEach(k => S.live[k] = 0);
   Object.keys(S.stats).forEach(k => S.stats[k] = 0);
   saveToStorage();
+  // Delete all tasks from DB so they don't reappear on refresh
+  if (supabase && currentUserId) {
+    supabase.from('tasks').delete()
+      .eq('user_id', currentUserId)
+      .then(({ error }) => { if (error) console.error('Clear DB error:', error.message); });
+    // Also reset time_saved in user_profiles
+    supabase.from('user_profiles')
+      .update({ time_saved: 0 })
+      .eq('user_id', currentUserId)
+      .catch(e => console.error('Clear timeSaved error:', e.message));
+  }
   refreshBoard();
   updStats();
   if (S.tab === 'logs' || S.tab === 'output') renderPanel();
@@ -1714,8 +1755,8 @@ async function handleAuthSubmit() {
   btn.disabled = true; spinner.style.display = 'block';
   $('authSubtitle').style.display = 'none';
   const fn = authMode === 'signin'
-    ? sb.auth.signInWithPassword({ email, password })
-    : sb.auth.signUp({ email, password });
+    ? supabase.auth.signInWithPassword({ email, password })
+    : supabase.auth.signUp({ email, password });
   const { data, error } = await fn;
   btn.disabled = false; spinner.style.display = 'none';
   if (error) { showAuthError(error.message); return; }
@@ -1739,6 +1780,16 @@ async function handleStart() {
     openSettings();
     return;
   }
+
+  // Delete previous run's tasks from Supabase before starting fresh.
+  // This prevents display_id collisions: a new run always starts from LOC-01
+  // and upsert would silently overwrite old tasks otherwise.
+  if (supabase && currentUserId) {
+    await supabase.from('tasks').delete()
+      .eq('user_id', currentUserId)
+      .catch(e => console.error('Pre-run clear error:', e.message));
+  }
+
   S.tasks = []; S.logs = []; S.tc = 1; S.selTask = null;
   S.timeSaved = 0; activeExecutors = 0;
   Object.keys(S.live).forEach(k => S.live[k] = 0);
@@ -1778,66 +1829,107 @@ function markRecentWrite(displayId) {
 }
 
 // ── Supabase init ────────────────────────────────────────────
+// --- UPDATED INIT LOGIC WITH DEBUGGING ---
+
 async function initSupabase() {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_OUT' || !session) {
-      currentUserId = null; showAuthScreen(); return;
+    console.log("1. Initializing Supabase...");
+    try {
+        if (!sb) {
+            sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        }
+
+        sb.auth.onAuthStateChange(async (event, session) => {
+            console.log("2. Auth Event Triggered:", event);
+            
+            if (!session) {
+                console.log("3. No session found. Showing Login.");
+                showAuthScreen();
+            } else {
+                console.log("3. Session found for user:", session.user.id);
+                currentUserId = session.user.id;
+                
+                // SAFETY VALVE: If the DB takes too long, show the app anyway
+                const timeout = setTimeout(() => {
+                    console.warn("4. DB Load timed out! Showing app with empty state.");
+                    hideAuthScreen();
+                }, 5000);
+
+                await loadFromSupabase(); 
+                
+                clearTimeout(timeout);
+                console.log("4. DB Load complete. Hiding Auth Overlay.");
+                hideAuthScreen();
+            }
+        });
+    } catch (err) {
+        console.error("CRITICAL INIT ERROR:", err);
     }
-    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-      currentUserId = session.user.id;
-      await loadFromSupabase();
-      hideAuthScreen();
-      refreshBoard(); updStats(); renderPanel();
-    }
-  });
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session) showAuthScreen();
 }
 
 async function loadFromSupabase() {
-  if (!supabase || !currentUserId) return;
-  const { data: profile } = await supabase
-    .from('user_profiles').select('agent_configs, time_saved')
-    .eq('user_id', currentUserId).single();
-  if (profile) {
-    if (profile.agent_configs && Object.keys(profile.agent_configs).length > 0)
-      S.cfg = { ...JSON.parse(JSON.stringify(DEF_CFG)), ...profile.agent_configs };
-    S.timeSaved = profile.time_saved || 0;
-  } else {
-    await sb.from('user_profiles').insert({
-      user_id: currentUserId, time_saved: 0, agent_configs: {}
-    }).catch(()=>{});
-  }
-  const { data: taskRows, error: taskErr } = await supabase
-    .from('tasks').select('*').eq('user_id', currentUserId)
-    .order('created_at', { ascending: true });
-  if (!taskErr && taskRows) {
-    S.tasks = taskRows.map(mapTask);
-    const maxNum = taskRows.reduce((max, row) => {
-      const n = parseInt((row.display_id||'').replace(/\D/g,''), 10);
-      return isNaN(n) ? max : Math.max(max, n);
-    }, 0);
-    S.tc = Math.max(maxNum + 1, S.tasks.length + 1);
-    S.tasks.forEach(t => {
-      if (t.status === 'in_progress') {
-        t.status = 'blocked';
-        dbUpsertTask(t).catch(()=>{});
-      }
-    });
-  }
-  const { data: logRows } = await supabase
-    .from('logs').select('message, created_at')
-    .eq('user_id', currentUserId)
-    .order('created_at', { ascending: false }).limit(100);
-  if (logRows) {
-    S.logs = logRows.map(r => ({
-      msg: r.message, type:'info',
-      ts: new Date(r.created_at).toLocaleTimeString()
-    }));
-  }
-  loadKeysFromStorage();
-  subscribeToChanges();
+    console.log("  -> Starting loadFromSupabase...");
+    if (!sb || !currentUserId) return;
+
+    try {
+        // Fetch profile
+        console.log("  -> Fetching user_profiles...");
+        const { data: profileData, error: profileError } = await sb
+            .from('user_profiles')
+            .select('agent_configs, time_saved')
+            .eq('user_id', currentUserId);
+
+        if (profileError) {
+            console.error("  -> Profile Error:", profileError.message);
+        } else if (!profileData || profileData.length === 0) {
+            console.log("  -> No profile found, creating one...");
+            await sb.from('user_profiles').insert({
+                user_id: currentUserId,
+                time_saved: 0,
+                agent_configs: {}
+            });
+        } else {
+            console.log("  -> Profile loaded.");
+            const profile = profileData[0];
+            if (profile.agent_configs) S.cfg = { ...S.cfg, ...profile.agent_configs };
+            S.timeSaved = profile.time_saved || 0;
+        }
+
+        // Fetch tasks
+        console.log("  -> Fetching tasks...");
+        const { data: taskRows, error: taskErr } = await sb
+            .from('tasks')
+            .select('*')
+            .eq('user_id', currentUserId)
+            .order('created_at', { ascending: true });
+
+        if (taskErr) {
+            console.error("  -> Task Error:", taskErr.message);
+        } else if (taskRows) {
+            console.log("  -> Tasks loaded:", taskRows.length);
+            S.tasks = taskRows.map(mapTask);
+            // Update task counter
+            const maxNum = taskRows.reduce((max, row) => {
+                const n = parseInt((row.display_id || '').replace(/\D/g, ''), 10);
+                return isNaN(n) ? max : Math.max(max, n);
+            }, 0);
+            S.tc = Math.max(maxNum + 1, S.tasks.length + 1);
+        }
+
+    } catch (err) {
+        console.error('  -> Fatal DB Error:', err);
+    }
+    console.log("  -> loadFromSupabase finished.");
+}
+
+function hideAuthScreen() {
+    console.log("5. hideAuthScreen called.");
+    const overlay = document.getElementById('authOverlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none'; // Force it
+    } else {
+        console.error("5. ERROR: Could not find element with id 'authOverlay'");
+    }
 }
 
 function subscribeToChanges() {
@@ -1860,7 +1952,7 @@ function subscribeToChanges() {
 }
 
 async function signOut() {
-  await sb.auth.signOut();
+  await supabase.auth.signOut();
   S.tasks=[]; S.logs=[]; S.tc=1; S.timeSaved=0; currentUserId=null;
   refreshBoard(); updStats();
   showAuthScreen();
