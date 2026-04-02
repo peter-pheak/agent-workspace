@@ -1,26 +1,29 @@
 function extractJSON(raw) {
   if (!raw) return null;
-  if (raw.length > 300000) {
-    raw = raw.slice(0, 300000) + '\n\n{"warning":"output truncated for parse safety"}';
-  }
   try {
+    // 1. Strip think tags if using a reasoner model
     let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-    text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    
+    // 2. Aggressively strip any markdown fences around the JSON
+    text = text.replace(/^```[a-z]*\s*/im, '').replace(/\s*```$/im, '').trim();
+
+    // 3. Find the first '{' and the LAST '}'
     const start = text.indexOf('{');
-    if (start === -1) throw new Error('No JSON object found');
-    let depth = 0, inString = false, escape = false, end = -1;
-    for (let i = start; i < text.length; i++) {
-      const ch = text[i];
-      if (escape) { escape = false; continue; }
-      if (ch === '\\' && inString) { escape = true; continue; }
-      if (ch === '"') { inString = !inString; continue; }
-      if (inString) continue;
-      if (ch === '{') depth++;
-      else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }
+    const end = text.lastIndexOf('}');
+    
+    if (start === -1 || end === -1 || end < start) {
+        throw new Error('No valid JSON object boundaries found.');
     }
-    if (end === -1) throw new Error('Unmatched braces — JSON cut off');
-    return JSON.parse(text.slice(start, end + 1));
-  } catch(e) { return null; }
+
+    // 4. Extract just the JSON block
+    const jsonString = text.substring(start, end + 1);
+    
+    return JSON.parse(jsonString);
+  } catch(e) { 
+      console.error('extractJSON failed:', e); 
+      console.log("RAW OUTPUT WAS:", raw); // This will show you exactly what the AI did wrong!
+      return null; 
+  }
 }
 
 function extractDeliverable(raw) {
