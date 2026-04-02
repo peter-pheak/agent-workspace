@@ -9,6 +9,29 @@ function render() {
   renderNavActive();
 }
 
+async function loadProjectContext() {
+    const container = $('project-context-list');
+    if (!container) return;
+    container.innerHTML = '<div style="font-size:11px; color:var(--dim); text-align:center;">Loading...</div>';
+    
+    try {
+        const res = await fetch('/api/list-source');
+        const files = await res.json();
+        
+        container.innerHTML = files.map(f => `
+            <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--dim); cursor:pointer; margin-bottom:4px;">
+                <input type="checkbox" class="context-cb" value="${f}">
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f}</span>
+            </label>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<div style="color:var(--red); font-size:11px;">Error loading files</div>';
+    }
+}
+
+// Add this to your DOMContentLoaded event so it loads on startup:
+// loadProjectContext();
+
 function renderNavActive() {
   document.querySelectorAll('.nav-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.view === S.view);

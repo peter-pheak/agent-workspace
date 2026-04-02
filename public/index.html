@@ -24,7 +24,15 @@
       <div id="agent-list">
         <!-- rendered by renderAgentList() -->
       </div>
-
+      
+      <div class="sb-section">Project Context</div>
+      <div id="project-context-list" style="padding: 8px; max-height: 150px; overflow-y: auto; background: var(--main); border-radius: 8px; margin: 0 8px;">
+        <!-- Checkboxes will load here -->
+      </div>
+      <button class="sb-btn" onclick="loadProjectContext()" style="margin-top:4px;">
+        <span>🔄</span> Refresh Files
+      </button>
+      
       <div id="agent-cfg">
         <!-- rendered by renderAgentCfg() -->
       </div>
