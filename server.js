@@ -483,7 +483,28 @@ app.post('/api/terminal', (req, res) => {
     res.json({ success: true, output: stdout.slice(0, 5000) });
   });
 });
+// TOOL: List files for the Sidebar
+app.get('/api/list-source', (req, res) => {
+  try {
+    const files = fs.readdirSync(currentWorkspacePath, { withFileTypes: true })
+      .filter(item => !item.isDirectory() && !['node_modules', '.git', 'agentos.db'].includes(item.name))
+      .map(item => item.name);
+    res.json(files);
+  } catch (e) {
+    res.status(500).json([]);
+  }
+});
 
+// TOOL: Read source for Context Injection
+app.get('/api/read-source', (req, res) => {
+  try {
+    const fileName = req.query.name;
+    const fullPath = path.join(currentWorkspacePath, fileName);
+    res.json({ content: fs.readFileSync(fullPath, 'utf8') });
+  } catch (e) {
+    res.status(404).json({ error: "File not found" });
+  }
+});
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`⬡ AgentOS Backend running on http://localhost:${port}`);
