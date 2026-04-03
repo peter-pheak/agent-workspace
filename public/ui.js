@@ -326,58 +326,58 @@ async function syncToDisk() {
   if (!doneTasks.length) { showNotification('No completed tasks to sync.'); return; }
 
   const files = [];
-  const fileHeaderRe = /###\s*File:\s*(?:"([^"]+)"|'([^']+)'|([^\s\n]+))/g;
+  
+  // NEW ULTRA-FORGIVING REGEX: Finds "### File: name" even with spaces, quotes, or weird paths
+  const fileHeaderRe = /###\s*File:\s*["']?([\w./\-\\]+)["']?/gi;
 
   for (const task of doneTasks) {
     const content = task.content || '';
     let match;
-    const headers = [];
-
+    
+    // We search the task content for file markers
     while ((match = fileHeaderRe.exec(content)) !== null) {
-      const filename = match[1] || match[2] || match[3] || '';
-      headers.push({ filename: filename.trim(), start: match.index, end: match.index + match[0].length });
-    }
-
-    if (headers.length > 0) {
-      for (let i = 0; i < headers.length; i++) {
-        const start = headers[i].end;
-        const end = i + 1 < headers.length ? headers[i + 1].start : content.length;
-        const section = content.slice(start, end).trim();
-
-        const codeMatch = section.match(/```(\w*)\n([\s\S]*?)```/);
-        const lang = codeMatch ? codeMatch[1] : 'txt';
-        const code = codeMatch ? codeMatch[2] : section;
-
-        if (code.trim()) {
-          let filename = headers[i].filename;
-          
-          // Phase 6 EXTENSION FIX:
-          if (!filename.includes('.')) {
-            const extMap = { 'js':'js', 'javascript':'js', 'py':'py', 'python':'py', 'html':'html', 'css':'css', 'json':'json', 'sh':'sh', 'bash':'sh', 'md':'md' };
-            const ext = extMap[lang.toLowerCase()] || 'txt';
-            filename = `${filename}.${ext}`;
-          }
-          
-          files.push({ filename, content: code.trim() });
-        }
+      const filename = match[1].trim();
+      const searchStartIndex = match.index + match[0].length;
+      
+      // Find the NEXT code block after this specific filename marker
+      const remainingContent = content.slice(searchStartIndex);
+      const codeBlockMatch = remainingContent.match(/```(?:\w*)\n([\s\S]*?)```/);
+      
+      if (codeBlockMatch) {
+        const rawCode = codeBlockMatch[1].trim();
+        // Remove the [EOF] marker if it exists
+        const cleanCode = rawCode.replace(/\[EOF\]\s*$/, '').trim();
+        
+        files.push({ filename, content: cleanCode });
       }
-    } else {
-      const fallbackName = `${task.id}-${task.title || 'task'}`.replace(/[^a-zA-Z0-9._-]/g, '_');
-      files.push({ filename: `${fallbackName}.txt`, content });
     }
   }
 
-  if (!files.length) { showNotification('No code blocks found to sync.'); return; }
+  if (files.length === 0) {
+    console.warn("Sync: No files found matching the protocol. Checking for raw code...");
+    // Fallback: If no protocol found, but task is 'code', save it anyway
+    for (const task of doneTasks) {
+        if (task.deliverable_type === 'code' && !content.includes('### File:')) {
+             files.push({ filename: `fallback/${task.id}.txt`, content: task.content });
+        }
+    }
+  }
+
+  if (files.length === 0) { showNotification('Error: No code blocks found in "Done" tasks.'); return; }
 
   try {
     const res = await fetch('/api/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files })
+      body: JSON.stringify({ files, workspace_id: S.currentWorkspaceId })
     });
     const data = await res.json();
-    if (data.success) { showNotification(`Sync complete: ${data.filesWritten?.length || 0} file(s)`); }
-  } catch (err) { showNotification(`Sync failed: ${err.message}`); }
+    if (data.success) {
+      showNotification(`🚀 Sync complete: ${data.filesWritten?.length || 0} files saved to disk.`);
+    }
+  } catch (err) {
+    showNotification(`Sync failed: ${err.message}`);
+  }
 }
 
 function downloadZip() { const payload = { tasks: S.tasks, time_saved: S.timeSaved, cfg: S.cfg, keys: S.keys }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'agentos_export.json'; a.click(); URL.revokeObjectURL(url); showNotification('Download ready (JSON).'); }
