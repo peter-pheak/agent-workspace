@@ -380,7 +380,70 @@ async function syncToDisk() {
   }
 }
 
-function downloadZip() { const payload = { tasks: S.tasks, time_saved: S.timeSaved, cfg: S.cfg, keys: S.keys }; const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'agentos_export.json'; a.click(); URL.revokeObjectURL(url); showNotification('Download ready (JSON).'); }
+async function downloadZip() {
+  const doneTasks = S.tasks.filter(t => t.status === 'done' && t.content);
+  if (!doneTasks.length) {
+    showNotification('No completed tasks to package.');
+    return;
+  }
+
+  showNotification('🗜️ Creating project ZIP...');
+  const zip = new JSZip();
+  const fileHeaderRe = /###\s*File:\s*["']?([\w./\-\\]+)["']?/gi;
+  let fileCount = 0;
+
+  for (const task of doneTasks) {
+    const content = task.content || '';
+    let match;
+    let foundInTask = false;
+
+    // Scan for protocol: ### File: path/name.ext
+    while ((match = fileHeaderRe.exec(content)) !== null) {
+      const filename = match[1].trim();
+      const remaining = content.slice(match.index + match[0].length);
+      const codeMatch = remaining.match(/```(?:\w*)\n([\s\S]*?)```/);
+
+      if (codeMatch) {
+          const cleanCode = codeMatch[1].replace(/\[EOF\]\s*$/, '').trim();
+          zip.file(filename, cleanCode);
+          fileCount++;
+          foundInTask = true;
+      }
+    }
+
+    // Fallback: If no protocol, but it's a code task, save the raw content
+    if (!foundInTask && task.deliverable_type === 'code') {
+      const fallbackName = `tasks/${task.id}-${task.title.replace(/\s+/g, '_')}.txt`;
+      zip.file(fallbackName, content);
+      fileCount++;
+    }
+  }
+
+  if (fileCount === 0) {
+    showNotification('Error: No source code found to zip.');
+    return;
+  }
+
+  // Generate the zip and trigger download
+  try {
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const projectName = document.getElementById('workspace-select')?.selectedOptions[0]?.text || 'AgentOS-Project';
+    
+    a.href = url;
+    a.download = `${projectName.replace(/\s+/g, '_')}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showNotification(`📦 Download Ready: ${fileCount} files packaged.`);
+  } catch (err) {
+    console.error('Zip Error:', err);
+    showNotification('Failed to create ZIP: ' + err.message);
+  }
+}
 
 /* ── Settings ── */
 function openSettings() {
