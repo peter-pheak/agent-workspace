@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Export Functionality Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Export Functionality Test</h1>
+    <p>This page tests the export functionality without requiring the full UI.</p>
+    
+    <button onclick="testDOCXExport()">Test DOCX Export</button>
+    <button onclick="testPDFExport()">Test PDF Export</button>
+    
+    <div id="result">Click a button to test export functionality.</div>
+    
+    <script>
+        async function testDOCXExport() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing DOCX export...';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/export-docx', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tasks: [
+                            { title: 'Test Task', instruction: 'Test Instruction', content: 'This is test content for DOCX export.' }
+                        ]
+                    })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Create download link
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'test-export.docx';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    resultDiv.innerHTML = '✅ DOCX export successful! File should download automatically.';
+                } else {
+                    resultDiv.innerHTML = '❌ DOCX export failed: ' + response.status + ' ' + response.statusText;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '❌ DOCX export error: ' + error.message;
+            }
+        }
+        
+        async function testPDFExport() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing PDF export...';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/export-pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tasks: [
+                            { title: 'Test Task', instruction: 'Test Instruction', content: 'This is test content for PDF export.' }
+                        ]
+                    })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Create download link
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'test-export.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    resultDiv.innerHTML = '✅ PDF export successful! File should download automatically.';
+                } else {
+                    resultDiv.innerHTML = '❌ PDF export failed: ' + response.status + ' ' + response.statusText;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '❌ PDF export error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

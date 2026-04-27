@@ -3,6 +3,8 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process'); 
+const { Document, Packer, Paragraph, TextRun } = require('docx');
+const { PDFDocument, rgb } = require('pdf-lib');
 
 const app = express();
 app.use(express.json({ limit: '12mb' }));
@@ -53,9 +55,18 @@ CREATE TABLE IF NOT EXISTS profile (
 
 // Safe Database Migrations (Upgrading older tables without data loss)
 const taskCols = db.prepare('PRAGMA table_info(tasks)').all();
+// Fix the database schema migration logic
+// Add deliverable_type column if it doesn't exist
+if (!taskCols.find(c => c.name === 'deliverable_type')) {
+  db.exec('ALTER TABLE tasks ADD COLUMN deliverable_type TEXT;');
+}
+
+// Add is_truncated column if it doesn't exist
 if (!taskCols.find(c => c.name === 'is_truncated')) {
   db.exec('ALTER TABLE tasks ADD COLUMN is_truncated INTEGER DEFAULT 0;');
 }
+
+// Add workspace_id column if it doesn't exist
 if (!taskCols.find(c => c.name === 'workspace_id')) {
   db.exec('ALTER TABLE tasks ADD COLUMN workspace_id INTEGER DEFAULT 1;');
 }
@@ -220,7 +231,6 @@ app.post('/api/agent', async (req, res) => {
   }
 });
 
-
 // ==================== WORKSPACE & DATABASE APIs ====================
 
 // 1. Get all Workspaces
@@ -280,6 +290,7 @@ app.get('/api/load', (req, res) => {
   try {
     const workspace_id = req.query.workspace_id ? parseInt(req.query.workspace_id) : 1;
     const tasks = db.prepare('SELECT * FROM tasks WHERE workspace_id = ?').all(workspace_id).map(toTask);
+
     const profileRow = db.prepare('SELECT * FROM profile WHERE id = 1').get();
     
     const profile = profileRow ? {
@@ -323,7 +334,6 @@ app.post('/api/save-task', (req, res) => {
         title_output=excluded.title_output,
         error=excluded.error,
         is_truncated=excluded.is_truncated;`);
-
     const data = {
       id: task.id,
       workspace_id: workspace_id,
@@ -486,11 +496,17 @@ app.post('/api/terminal', (req, res) => {
 // TOOL: List files for the Sidebar
 app.get('/api/list-source', (req, res) => {
   try {
+    // Ensure workspace directory exists
+    if (!fs.existsSync(currentWorkspacePath)) {
+      fs.mkdirSync(currentWorkspacePath, { recursive: true });
+    }
+    
     const files = fs.readdirSync(currentWorkspacePath, { withFileTypes: true })
       .filter(item => !item.isDirectory() && !['node_modules', '.git', 'agentos.db'].includes(item.name))
       .map(item => item.name);
     res.json(files);
   } catch (e) {
+    console.error('List source error:', e);
     res.status(500).json([]);
   }
 });
@@ -505,7 +521,130 @@ app.get('/api/read-source', (req, res) => {
     res.status(404).json({ error: "File not found" });
   }
 });
+
+// NEW: Export to DOCX
+app.post('/api/export-docx', async (req, res) => {
+  try {
+    const { tasks } = req.body;
+    if (!tasks || !Array.isArray(tasks)) {
+      return res.status(400).json({ success: false, error: 'Invalid tasks data' });
+    }
+
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: tasks.map(task =>
+          new Paragraph({
+            children: [
+              new TextRun({ text: task.title || 'Untitled', bold: true, size: 28 }),
+              new TextRun({ text: '\n' }),
+              new TextRun({ text: task.instruction || '', size: 24 }),
+              new TextRun({ text: '\n\n' }),
+              new TextRun({ text: task.content || 'No content', size: 22 }),
+              new TextRun({ text: '\n\n\n' })
+            ]
+          })
+        )
+      }]
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+    res.setHeader('Content-Disposition', 'attachment; filename=AgentOS-Export.docx');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// NEW: Export to PDF
+app.post('/api/export-pdf', async (req, res) => {
+  try {
+    const { tasks } = req.body;
+    if (!tasks || !Array.isArray(tasks)) {
+      return res.status(400).json({ success: false, error: 'Invalid tasks data' });
+    }
+
+    const pdfDoc = await PDFDocument.create();
+    let page = pdfDoc.addPage([600, 800]);
+    const { height } = page.getSize();
+    let y = height - 50;
+
+    // Helper function to wrap text
+    function wrapText(text, maxLength) {
+      const words = text.split(' ');
+      const lines = [];
+      let currentLine = '';
+      for (const word of words) {
+        if (currentLine.length + word.length <= maxLength) {
+          currentLine += (currentLine ? ' ' : '') + word;
+        } else {
+          lines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+      return lines;
+    }
+
+    tasks.forEach((task, index) => {
+      if (y < 50) {
+        page = pdfDoc.addPage([600, 800]);
+        y = height - 50;
+      }
+
+      page.drawText(task.title || 'Untitled', {
+        x: 50,
+        y,
+        size: 18,
+        color: rgb(0, 0, 0)
+      });
+      y -= 30;
+
+      const instructionLines = wrapText(task.instruction || '', 70);
+      instructionLines.forEach(line => {
+        if (y < 50) {
+          page = pdfDoc.addPage([600, 800]);
+          y = height - 50;
+        }
+        page.drawText(line, {
+          x: 50,
+          y,
+          size: 14,
+          color: rgb(0.2, 0.2, 0.2)
+        });
+        y -= 15;
+      });
+      y -= 10;
+
+      const contentLines = wrapText(task.content || 'No content', 70);
+      contentLines.forEach(line => {
+        if (y < 50) {
+          page = pdfDoc.addPage([600, 800]);
+          y = height - 50;
+        }
+        page.drawText(line, {
+          x: 50,
+          y,
+          size: 12,
+          color: rgb(0.5, 0.5, 0.5)
+        });
+        y -= 15;
+      });
+      y -= 20;
+    });
+
+    const pdfBytes = await pdfDoc.save();
+    res.setHeader('Content-Disposition', 'attachment; filename=AgentOS-Export.pdf');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.send(Buffer.from(pdfBytes));
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`⬡ AgentOS Backend running on http://localhost:${port}`);
 });
+

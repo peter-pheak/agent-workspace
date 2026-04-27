@@ -8,6 +8,7 @@ function render() {
   renderPolishBtn();
   renderNavActive();
   renderWorkspaceDropdown(); // NEW: Keeps the project list in sync
+  renderExportButtons(); // NEW: Export buttons
 }
 
 async function loadProjectContext() {
@@ -19,7 +20,8 @@ async function loadProjectContext() {
         const res = await fetch('/api/list-source');
         const files = await res.json();
         
-        container.innerHTML = files.map(f => `
+        container.innerHTML = files.map(f =>
+            `
             <label style="display:flex; align-items:center; gap:6px; font-size:11px; color:var(--dim); cursor:pointer; margin-bottom:4px;">
                 <input type="checkbox" class="context-cb" value="${f}">
                 <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f}</span>
@@ -203,7 +205,7 @@ function renderTaskBoard() {
 }
 
 function renderTaskCard(task) {
-  const m      = AGENT_META[task.assignee] || AGENT_META.Writer;
+  const m      = AGENT_META[task.assignee] || AGENT_META.Organizer;
   const status = task.status;
   const isLive = status === 'in_progress';
   return `<div class="task-card" onclick="openModal('${task.id}')">
@@ -515,3 +517,97 @@ async function testAgent(agentId) {
 
 function _esc(str) { if (!str) return ''; return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function _statusLabel(s) { return { todo:'Todo', waiting:'Waiting', in_progress:'In Progress', done:'Done', blocked:'Blocked' }[s] || s; }
+
+// Add export functions after the existing functions
+function renderExportButtons() {
+  const el = document.getElementById('export-buttons');
+  if (!el) return;
+
+  const doneTasks = getDoneTasks();
+  if (doneTasks.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = `
+    <button class="btn-export" onclick="exportToDOCX()" title="Export to Word">📄 DOCX</button>
+    <button class="btn-export" onclick="exportToPDF()" title="Export to PDF">📑 PDF</button>
+  `;
+}
+
+async function exportToDOCX() {
+  try {
+    const doneTasks = getDoneTasks();
+    if (doneTasks.length === 0) {
+      showNotification('No completed tasks to export');
+      return;
+    }
+
+    showNotification('Preparing DOCX export...');
+
+    const response = await fetch('/api/export-docx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tasks: doneTasks })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AgentOS-Export-${new Date().toISOString().slice(0, 10)}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showNotification('DOCX export completed!');
+  } catch (error) {
+    console.error('DOCX export error:', error);
+    showNotification(`Export failed: ${error.message}`);
+  }
+}
+
+async function exportToPDF() {
+  try {
+    const doneTasks = getDoneTasks();
+    if (doneTasks.length === 0) {
+      showNotification('No completed tasks to export');
+      return;
+    }
+
+    showNotification('Preparing PDF export...');
+
+    const response = await fetch('/api/export-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tasks: doneTasks })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `AgentOS-Export-${new Date().toISOString().slice(0, 10)}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showNotification('PDF export completed!');
+  } catch (error) {
+    console.error('PDF export error:', error);
+    showNotification(`Export failed: ${error.message}`);
+  }
+}
+
+
+

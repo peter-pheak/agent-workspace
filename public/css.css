@@ -515,6 +515,30 @@ a { color: var(--accent); }
 }
 .btn-danger:hover { background: #fecaca; }
 
+/* Add export button styles with better styling */
+.btn-export {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  transition: background .15s, color .15s;
+  margin-right: 6px;
+}
+.btn-export:hover {
+  background: #ede9fe;
+  color: var(--accent);
+}
+
+/* Export buttons container styling */
+#export-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 /* ── Settings ── */
 #settings-body { padding: 16px 22px; overflow-y: auto; }
 #settings-body h3 { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
@@ -537,7 +561,6 @@ a { color: var(--accent); }
   outline: none;
 }
 .settings-field input:focus { border-color: var(--accent); }
-
 /* ── Notification ── */
 .notification {
   position: fixed;
@@ -557,7 +580,6 @@ a { color: var(--accent); }
   text-align: center;
 }
 .notification.hidden { display: none; }
-
 /* ── Utilities ── */
 .hidden { display: none !important; }
 .spin   { display: inline-block; animation: spin .8s linear infinite; }
@@ -584,3 +606,4 @@ a { color: var(--accent); }
 ::-webkit-scrollbar       { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+

@@ -1,35 +1,33 @@
 const TIME_CREDIT = 5;
 
 const DEF_CFG = {
-  CEO:        { provider: 'deepseek', model: 'deepseek-reasoner'     },
-  Writer:     { provider: 'deepseek', model: 'deepseek-chat'     },
-  Coder:      { provider: 'deepseek', model: 'deepseek-chat'     },
-  Researcher: { provider: 'gemini',   model: 'gemini-2.5-flash'  },
-  Reviewer:   { provider: 'deepseek', model: 'deepseek-chat'     }
+  Planner:      { provider: 'deepseek', model: 'deepseek-reasoner'     },
+  Organizer:    { provider: 'deepseek', model: 'deepseek-chat'     },
+  Analyzer:     { provider: 'gemini',   model: 'gemini-2.5-flash'  },
+  PromptEngineer: { provider: 'deepseek', model: 'deepseek-chat'     }
 };
 
 const AGENT_MAX_TOKENS = {
-  CEO: 3000, Writer: 4000, Coder: 4000, Researcher: 4000, Reviewer: 8000
+  Planner: 3000, Organizer: 4000, Analyzer: 4000, PromptEngineer: 8000
 };
 
 const AGENT_META = {
-  CEO:        { icon: '⬡',   color: '#0d9488', bg: '#ccfbf1', label: 'CEO'        },
-  Writer:     { icon: '✍',   color: '#7c3aed', bg: '#ede9fe', label: 'Writer'     },
-  Coder:      { icon: '⟨/⟩', color: '#2563eb', bg: '#dbeafe', label: 'Coder'      },
-  Researcher: { icon: '🔬',  color: '#059669', bg: '#d1fae5', label: 'Researcher' },
-  Reviewer:   { icon: '★',   color: '#d97706', bg: '#fef3c7', label: 'Reviewer'   }
+  Planner:      { icon: '⬡',   color: '#0d9488', bg: '#ccfbf1', label: 'Planner'      },
+  Organizer:    { icon: '✍',   color: '#7c3aed', bg: '#ede9fe', label: 'Organizer'    },
+  Analyzer:     { icon: '🔬',  color: '#059669', bg: '#d1fae5', label: 'Analyzer'     },
+  PromptEngineer: { icon: '★',   color: '#d97706', bg: '#fef3c7', label: 'Prompt Engineer'   }
 };
 
+// Remove code-related deliverable types
 const TIME_CREDITS = {
   document: 25,
-  code:     35,
   analysis: 20,
   mixed:    45
 };
 
-const PROVIDERS = ['deepseek', 'gemini', 'openrouter', 'groq', 'cloudflare'];
+const PROVIDERS = ['deepseek', 'gemini', 'openrouter'];
 
-const FALLBACK_CHAIN = ['deepseek', 'gemini', 'groq', 'openrouter', 'cloudflare'];
+const FALLBACK_CHAIN = ['deepseek', 'gemini', 'openrouter'];
 
 const S = {
   currentWorkspaceId: 1,  // NEW: Tracks the active project
@@ -45,10 +43,10 @@ const S = {
   selTask:    null,
   searchQ:    '',
   taskType:   'auto',
-  keys:       { deepseek: '', gemini: '', cloudflare: '', cfAcct: '', openrouter: '', groq: '' },
+  keys:       { deepseek: '', gemini: '', openrouter: '' },
   cfg:        JSON.parse(JSON.stringify(DEF_CFG)),
-  stats:      { deepseek: 0, gemini: 0, cloudflare: 0, openrouter: 0, groq: 0 },
-  live:       { CEO: 0, Writer: 0, Coder: 0, Researcher: 0, Reviewer: 0 },
+  stats:      { deepseek: 0, gemini: 0, openrouter: 0 },
+  live:       { Planner: 0, Organizer: 0, Analyzer: 0, PromptEngineer: 0 },
   failResolve: null,
   runStart:   null,
   timeSaved:  0
@@ -65,7 +63,7 @@ function canPolish() {
     !S.polishing &&
     S.tasks.length > 0 &&
     S.tasks.some(t => t.status === 'done') &&
-    !S.tasks.some(t => t.assignee === 'Reviewer')
+    !S.tasks.some(t => t.assignee === 'PromptEngineer')
   );
 }
 
@@ -128,7 +126,7 @@ function mkTask(overrides) {
     workspace_id:     S.currentWorkspaceId, // Attach current project ID
     title:            'Untitled',
     instruction:      '',
-    assignee:         'Writer',
+    assignee:         'Organizer',
     status:           'todo',
     depends_on:       [],
     deliverable_type: 'document',

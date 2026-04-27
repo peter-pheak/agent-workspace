@@ -116,5 +116,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  console.log('AgentOS v4.5 Initialized');
+  console.log('AgentOS v4.5 (Research Edition) Initialized');
 });

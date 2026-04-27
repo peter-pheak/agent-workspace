@@ -65,8 +65,7 @@
         >
         
         <div id="topbar-actions">
-          <button class="btn-secondary" onclick="downloadZip()">📦 Download ZIP</button>
-          <button class="btn-secondary" onclick="syncToDisk()">💻 Sync to Disk</button>
+          <div id="export-buttons"></div>
           <button id="polish-btn" class="btn-polish hidden" onclick="polishAndCombine()">
             <span id="polish-spin" class="spin hidden">⟳</span>
             ★ Polish &amp; Combine
@@ -87,7 +86,6 @@
         <div id="type-radios">
           <label><input type="radio" name="taskType" value="auto" checked onchange="S.taskType='auto'"> Auto</label>
           <label><input type="radio" name="taskType" value="write" onchange="S.taskType='write'"> Write</label>
-          <label><input type="radio" name="taskType" value="code"  onchange="S.taskType='code'"> Code</label>
           <label><input type="radio" name="taskType" value="research" onchange="S.taskType='research'"> Research</label>
           <label><input type="radio" name="taskType" value="plan"  onchange="S.taskType='plan'"> Plan</label>
         </div>

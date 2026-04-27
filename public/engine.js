@@ -212,9 +212,9 @@ async function runCEO(goal) {
     }
     // -------------------------
 
-    // Now build the message and ADD the contextString to the system prompt
+        // Now build the message and ADD the contextString to the system prompt
     const userMessage = buildCEOMessage(goal, S.taskType);
-    const systemPrompt = PROMPTS.CEO.system + contextString;
+    const systemPrompt = (PROMPTS.Planner ? PROMPTS.Planner.system : '') + contextString;
 
     const raw = await callFO(agentId, systemPrompt, userMessage, null, AGENT_MAX_TOKENS.CEO);
     const treeRes = await fetch('/api/tree');
@@ -229,8 +229,8 @@ async function runCEO(goal) {
     console.warn('Tree fetch error:', e);
   }
 
-  // Build custom system prompt with tree injection
-  let customSystemPrompt = PROMPTS.CEO;
+    // Build custom system prompt with tree injection
+  let customSystemPrompt = PROMPTS.Planner ? PROMPTS.Planner.system : '';
   if (projectTreeStr) {
     customSystemPrompt += `\n\n### CURRENT WORKSPACE MAP (Directory Tree):\n\`\`\`json\n${projectTreeStr}\n\`\`\`\nUse this map to understand the project structure before assigning tasks. Do NOT create files or folders that already exist unless explicitly required.`;
   }
@@ -304,7 +304,7 @@ function buildUserMessage(task) {
   if (!task || !task.instruction) return '';
 
   return `Task: ${task.title || 'Untitled'}\n` +
-         `Assignee: ${task.assignee || 'Writer'}\n` +
+         `Assignee: ${task.assignee || 'Organizer'}\n` +
          `Deliverable Type: ${task.deliverable_type || 'document'}\n\n` +
          `${task.instruction.trim()}`;
 }
@@ -312,12 +312,12 @@ function buildUserMessage(task) {
 function buildCEOMessage(goal, taskType = 'auto') {
   if (!goal) return '';
 
-  return `You are the CEO agent in AgentOS. Create a structured execution plan for this goal.\n\n` +
+  return `You are the Planner agent in AgentOS. Create a structured execution plan for this goal.\n\n` +
          `Goal: ${goal.trim()}\n` +
          `Task type: ${taskType}\n\n` +
          `Output format: JSON with keys { message, tasks }.\n` +
-         `tasks must be an array of objects with: title, instruction, assignee, deliverable_type, depends_on.\n` +
-         `Use assignees from [Writer, Coder, Researcher, Reviewer].\n` +
+         `tasks must be an array of objects with: title, instruction, assignee, depends_on.\n` +
+         `Use assignees from [Organizer, Analyzer, PromptEngineer].\n` +
          `Use depends_on by task title or id references.\n` +
          `No plain text list; return valid JSON only.`;
 }
@@ -381,3 +381,4 @@ function _nextFallback(currentProvider) {
   }
   return null;
 }
+
